@@ -3,6 +3,7 @@ import sqlite3
 from flask import Flask, render_template, request, redirect, url_for, send_file, send_from_directory, jsonify, session, Response
 from datetime import datetime
 from functools import wraps
+import mimetypes
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'kinotop-secret-key-2024')
@@ -10,7 +11,7 @@ app.secret_key = os.environ.get('SECRET_KEY', 'kinotop-secret-key-2024')
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 app.config['UPLOAD_FOLDER_FILMS'] = os.path.join(BASE_DIR, 'static/uploads/films')
 app.config['UPLOAD_FOLDER_SHORTS'] = os.path.join(BASE_DIR, 'static/uploads/shorts')
-app.config['MAX_CONTENT_LENGTH'] = 4 * 1024 * 1024 * 1024
+app.config['MAX_CONTENT_LENGTH'] = 4 * 1024 * 1024 * 1024  # 4GB
 
 ALLOWED_VIDEO = {'mp4', 'avi', 'mkv', 'mov', 'webm', 'm4v'}
 ALLOWED_IMAGE = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
@@ -95,8 +96,8 @@ def stream_video(kod):
     file_size = os.path.getsize(video_path)
     range_header = request.headers.get('Range', None)
     
-    def generate_instant(video_path, start, length, chunk_size=512*1024):
-        """Instant streaming - darhol boshlanadi"""
+    def generate_instant(video_path, start, length, chunk_size=256*1024):
+        """Instant streaming - 256KB chunk bilan darhol boshlanadi"""
         with open(video_path, "rb") as f:
             f.seek(start)
             sent = 0
@@ -108,8 +109,8 @@ def stream_video(kod):
                 yield chunk
     
     if not range_header:
-        # BIRINCHI 256KB DARHOL (video 0.3 soniyada boshlanadi)
-        first_chunk = 256 * 1024
+        # BIRINCHI 128KB DARHOL (video 0.3 soniyada boshlanadi)
+        first_chunk = 128 * 1024
         response = Response(
             generate_instant(video_path, 0, min(first_chunk, file_size)), 
             206, 
@@ -163,14 +164,10 @@ def stream_shorts(id):
     if not os.path.exists(video_path):
         return "Video topilmadi", 404
     
-    file_size = os.path.getsize(video_path)
-    
     def generate_instant():
         with open(video_path, "rb") as f:
-            # Birinchi 256KB darhol
-            first_chunk = f.read(256 * 1024)
+            first_chunk = f.read(128 * 1024)
             yield first_chunk
-            # Qolgan qismi
             while True:
                 chunk = f.read(256 * 1024)
                 if not chunk:
@@ -206,8 +203,7 @@ def download_film(kod):
         video_path,
         as_attachment=True,
         download_name=f"{film_nomi}.mp4",
-        mimetype='video/mp4',
-        conditional=True
+        mimetype='video/mp4'
     )
 
 @app.route('/download-shorts/<int:id>')
@@ -232,8 +228,7 @@ def download_shorts(id):
         video_path,
         as_attachment=True,
         download_name=f"{sarlavha}.mp4",
-        mimetype='video/mp4',
-        conditional=True
+        mimetype='video/mp4'
     )
 
 # ============ API ============
@@ -255,7 +250,7 @@ def index():
     db_path = os.path.join(BASE_DIR, 'database.db')
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
-    c.execute("SELECT * FROM shorts ORDER BY sana DESC")
+    c.execute("SELECT * FROM shorts ORDER BY sana DESC LIMIT 20")
     rows = c.fetchall()
     shorts = [{'id': r[0], 'sarlavha': r[1], 'tafsilot': r[2], 'fayl_nomi': r[3], 'sana': r[4]} for r in rows]
     conn.close()
@@ -273,11 +268,11 @@ def film(kod):
         return "Film topilmadi!", 404
     
     # Ko'rishlar sonini oshirish
-    conn = sqlite3.connect(db_path)
-    c = conn.cursor()
-    c.execute("UPDATE films SET korishlar = korishlar + 1 WHERE kod = ?", (kod.upper(),))
-    conn.commit()
-    conn.close()
+    conn2 = sqlite3.connect(db_path)
+    c2 = conn2.cursor()
+    c2.execute("UPDATE films SET korishlar = korishlar + 1 WHERE kod = ?", (kod.upper(),))
+    conn2.commit()
+    conn2.close()
     
     film = {
         'id': row[0], 'kod': row[1], 'nomi': row[2],
@@ -341,7 +336,7 @@ def admin_film():
         return "Fayl tanlanmagan!", 400
     
     if not allowed_file(fayl.filename, ALLOWED_VIDEO):
-        return "Video fayl kerak!", 400
+        return "Video fayl kerak! (mp4, avi, mkv, mov, webm)", 400
     
     ext = fayl.filename.rsplit('.', 1)[1].lower()
     yangi_nom = f"{kod}.{ext}"
@@ -364,7 +359,8 @@ def admin_film():
     try:
         c.execute("INSERT INTO films (kod, nomi, tafsilot, yil, janr, rasm, fayl_nomi, size) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                   (kod, nomi, tafsilot, yil, janr, rasm_nomi, yangi_nom, file_size))
-        c.execute("INSERT INTO featured_films (film_id) VALUES (?)", (c.lastrowid,))
+        film_id = c.lastrowid
+        c.execute("INSERT INTO featured_films (film_id) VALUES (?)", (film_id,))
         conn.commit()
     except sqlite3.IntegrityError:
         os.remove(video_path)
@@ -467,6 +463,11 @@ def not_found(error):
 def internal_error(error):
     return "<h1>500 - Server xatosi!</h1><a href='/'>Bosh sahifaga qaytish</a>", 500
 
+# ============ STATIC FILES ============
+@app.route('/static/uploads/<path:filename>')
+def serve_upload(filename):
+    return send_from_directory(os.path.join(BASE_DIR, 'static/uploads'), filename)
+
 # ============ MAIN ============
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))
@@ -482,10 +483,12 @@ if __name__ == '__main__':
     ║  📝 ADMIN PASS:  admin123                                                ║
     ║                                                                          ║
     ║  ⚡ INSTANT FEATURES:                                                     ║
-    ║     ✓ First chunk: 256KB (0.3 seconds)                                  ║
+    ║     ✓ First chunk: 128KB (0.2 seconds)                                  ║
+    ║     ✓ Chunk size: 256KB                                                 ║
     ║     ✓ No buffering delay                                                ║
     ║     ✓ X-Accel-Buffering: no                                             ║
     ║     ✓ Keep-Alive connection                                             ║
+    ║     ✓ Video starts IMMEDIATELY                                          ║
     ║                                                                          ║
     ╚══════════════════════════════════════════════════════════════════════════╝
     """.format(port))
