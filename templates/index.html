@@ -70,27 +70,6 @@
             margin-bottom: 30px;
         }
 
-        .preloader-progress {
-            width: 200px;
-            height: 3px;
-            background: rgba(255,255,255,0.2);
-            border-radius: 3px;
-            margin: 20px auto;
-            overflow: hidden;
-        }
-
-        .preloader-progress-bar {
-            width: 0%;
-            height: 100%;
-            background: linear-gradient(90deg, #667eea, #764ba2);
-            transition: width 0.1s linear;
-        }
-
-        .preloader-status {
-            color: rgba(255,255,255,0.5);
-            font-size: 0.8rem;
-        }
-
         .start-btn {
             background: linear-gradient(135deg, #667eea, #764ba2);
             border: none;
@@ -109,14 +88,8 @@
         }
 
         @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         @keyframes bounce {
@@ -216,26 +189,6 @@
 
         .overlay-btn:active { transform: scale(0.9); }
 
-        .short-loading {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 40px;
-            height: 40px;
-            border: 3px solid rgba(255,255,255,0.3);
-            border-top-color: #667eea;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            z-index: 15;
-            display: none;
-        }
-
-        @keyframes spin {
-            to { transform: translate(-50%, -50%) rotate(360deg); }
-        }
-
-        /* CODE BAR */
         .code-bar {
             position: fixed;
             bottom: 0;
@@ -463,6 +416,10 @@
         .film-loading-dots span:nth-child(2) { animation-delay: 0.2s; }
         .film-loading-dots span:nth-child(3) { animation-delay: 0.4s; }
 
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
         @keyframes dotPulse {
             0%, 60%, 100% { opacity: 0.3; transform: scale(0.8); }
             30% { opacity: 1; transform: scale(1.2); }
@@ -527,10 +484,6 @@
         <div class="preloader-logo">🎬</div>
         <div class="preloader-title">KINOTOP</div>
         <div class="preloader-subtitle">Eng yangi va qiziqarli kinolar</div>
-        <div class="preloader-progress">
-            <div class="preloader-progress-bar" id="progressBar"></div>
-        </div>
-        <div class="preloader-status" id="statusText">Shorts yuklanmoqda...</div>
         <button class="start-btn" id="startBtn">🎥 Videoni ko'rishni boshlash</button>
     </div>
 </div>
@@ -558,7 +511,6 @@
             <video preload="auto" playsinline webkit-playsinline muted loop>
                 <source src="/stream-shorts/{{ short.id }}" type="video/mp4">
             </video>
-            <div class="short-loading" id="loading-{{ short.id }}"></div>
             <div class="short-info">
                 <div class="short-title">{{ short.sarlavha }}</div>
                 <div class="short-desc">{{ short.tafsilot or 'Qiziqarli video' }}</div>
@@ -613,267 +565,4 @@
                 <div class="numpad-btn" data-value=""></div>
             </div>
             <div class="numpad-actions">
-                <div class="action-btn clear" id="clearBtn">O'chirish</div>
-                <div class="action-btn backspace" id="backspaceBtn">⌫</div>
-            </div>
-            <button class="watch-submit" id="watchSubmitBtn">🎬 Tomosha qilish</button>
-        </div>
-    </div>
-</div>
-
-<script>
-    // ============ PRELOADER (3 SONIYA) + SHORTS YUKLASH ============
-    const preloader = document.getElementById('preloader');
-    const startBtn = document.getElementById('startBtn');
-    const shortsContainer = document.getElementById('shortsContainer');
-    const progressBar = document.getElementById('progressBar');
-    const statusText = document.getElementById('statusText');
-    let allVideos = [];
-    let videosLoaded = 0;
-    let totalVideos = 0;
-
-    function preloadAllShorts() {
-        const videoElements = document.querySelectorAll('.short-video video');
-        allVideos = Array.from(videoElements);
-        totalVideos = allVideos.length;
-        
-        if (totalVideos === 0) {
-            progressBar.style.width = '100%';
-            statusText.innerHTML = 'Tayyor!';
-            return;
-        }
-        
-        allVideos.forEach((video, index) => {
-            video.load();
-            
-            video.addEventListener('canplaythrough', () => {
-                videosLoaded++;
-                const percent = (videosLoaded / totalVideos) * 100;
-                progressBar.style.width = percent + '%';
-                statusText.innerHTML = `Shorts yuklanmoqda... ${Math.round(percent)}%`;
-                
-                if (videosLoaded === totalVideos) {
-                    statusText.innerHTML = 'Barcha shortslar tayyor!';
-                }
-            });
-            
-            video.addEventListener('error', () => {
-                videosLoaded++;
-                const percent = (videosLoaded / totalVideos) * 100;
-                progressBar.style.width = percent + '%';
-            });
-        });
-    }
-
-    startBtn.addEventListener('click', () => {
-        preloader.classList.add('hide');
-        shortsContainer.style.display = 'block';
-        
-        setTimeout(() => {
-            if (allVideos.length > 0) {
-                prepareFirstVideo();
-                setupVideoLoop();
-            }
-        }, 100);
-    });
-
-    // Shorts player
-    let currentIndex = 0;
-    let currentVideo = null;
-
-    function prepareFirstVideo() {
-        if (allVideos.length > 0) {
-            currentVideo = allVideos[0];
-            currentVideo.muted = false;
-            currentVideo.play().catch(e => console.log());
-            const firstSoundBtn = document.querySelector('.sound-btn');
-            if (firstSoundBtn) firstSoundBtn.innerHTML = '🔊';
-        }
-    }
-
-    function playCurrentVideoOnly() {
-        allVideos.forEach((video) => {
-            const parent = video.closest('.short-video');
-            const soundBtn = parent?.querySelector('.sound-btn');
-            video.pause();
-            video.muted = true;
-            if (soundBtn) soundBtn.innerHTML = '🔇';
-        });
-        
-        if (allVideos[currentIndex]) {
-            currentVideo = allVideos[currentIndex];
-            const parent = currentVideo.closest('.short-video');
-            const soundBtn = parent?.querySelector('.sound-btn');
-            currentVideo.muted = false;
-            currentVideo.play().catch(e => console.log());
-            if (soundBtn) soundBtn.innerHTML = '🔊';
-        }
-    }
-
-    function getCurrentIndex() {
-        const scrollTop = shortsContainer.scrollTop;
-        const itemHeight = window.innerHeight;
-        return Math.round(scrollTop / itemHeight);
-    }
-
-    let scrollTimeout;
-    shortsContainer.addEventListener('scroll', () => {
-        if (scrollTimeout) clearTimeout(scrollTimeout);
-        scrollTimeout = setTimeout(() => {
-            const newIndex = getCurrentIndex();
-            if (newIndex !== currentIndex && newIndex >= 0 && newIndex < allVideos.length) {
-                currentIndex = newIndex;
-                playCurrentVideoOnly();
-            }
-        }, 50);
-    });
-
-    function setupVideoLoop() {
-        allVideos.forEach((video, idx) => {
-            video.addEventListener('ended', () => {
-                if (idx === currentIndex) {
-                    video.currentTime = 0;
-                    video.play().catch(e => console.log());
-                }
-            });
-        });
-    }
-
-    function toggleSound(btn, videoId) {
-        const parent = btn.closest('.short-video');
-        const video = parent.querySelector('video');
-        if (video) {
-            if (video.muted) {
-                video.muted = false;
-                btn.innerHTML = '🔊';
-            } else {
-                video.muted = true;
-                btn.innerHTML = '🔇';
-            }
-        }
-    }
-
-    function likeVideo(btn) {
-        btn.style.transform = 'scale(1.2)';
-        setTimeout(() => { btn.style.transform = 'scale(1)'; }, 200);
-        btn.innerHTML = '❤️';
-        setTimeout(() => { btn.innerHTML = '❤️'; }, 1000);
-    }
-
-    // ============ 4 XONALI KOD KIRITISH ============
-    let currentCode = '';
-    const maxCodeLength = 4;
-    const codeDisplay = document.getElementById('codeDisplay');
-    const modalOverlay = document.getElementById('modalOverlay');
-    const codeBar = document.getElementById('codeBar');
-    const openModalBtn = document.getElementById('openModalBtn');
-    const closeModalBtn = document.getElementById('closeModalBtn');
-    const clearBtn = document.getElementById('clearBtn');
-    const backspaceBtn = document.getElementById('backspaceBtn');
-    const watchSubmitBtn = document.getElementById('watchSubmitBtn');
-    const filmLoadingOverlay = document.getElementById('filmLoadingOverlay');
-
-    function updateDisplay() {
-        const displayText = currentCode.padEnd(maxCodeLength, '_');
-        codeDisplay.textContent = displayText;
-    }
-
-    function addDigit(digit) {
-        if (currentCode.length < maxCodeLength) {
-            currentCode += digit;
-            updateDisplay();
-        }
-    }
-
-    function clearCode() { currentCode = ''; updateDisplay(); }
-    function backspace() { currentCode = currentCode.slice(0, -1); updateDisplay(); }
-
-    function submitCode() {
-        if (currentCode.length !== maxCodeLength) {
-            alert(`Iltimos, ${maxCodeLength} xonali kodni kiriting!`);
-            return;
-        }
-        
-        const kod = currentCode;
-        filmLoadingOverlay.classList.add('show');
-        
-        fetch(`/api/check/${kod}`)
-            .then(response => {
-                if (response.ok) {
-                    window.location.href = `/film/${kod}`;
-                } else {
-                    filmLoadingOverlay.classList.remove('show');
-                    alert('Bunday kodli film topilmadi!');
-                }
-            })
-            .catch(() => {
-                filmLoadingOverlay.classList.remove('show');
-                alert('Xatolik yuz berdi!');
-            });
-    }
-
-    document.querySelectorAll('.numpad-btn').forEach(btn => {
-        const value = btn.getAttribute('data-value');
-        if (value && value.trim() !== '') {
-            btn.addEventListener('click', () => addDigit(value));
-        }
-    });
-
-    clearBtn.addEventListener('click', clearCode);
-    backspaceBtn.addEventListener('click', backspace);
-    watchSubmitBtn.addEventListener('click', submitCode);
-
-    openModalBtn.addEventListener('click', () => {
-        modalOverlay.classList.add('show');
-        codeBar.classList.add('hidden');
-    });
-
-    function closeModal() {
-        modalOverlay.classList.remove('show');
-        codeBar.classList.remove('hidden');
-        clearCode();
-    }
-
-    closeModalBtn.addEventListener('click', closeModal);
-    modalOverlay.addEventListener('click', (e) => { if (e.target === modalOverlay) closeModal(); });
-
-    document.addEventListener('keydown', (e) => {
-        if (!modalOverlay.classList.contains('show')) return;
-        if (e.key >= '0' && e.key <= '9') { addDigit(e.key); }
-        else if (e.key === 'Backspace') { backspace(); }
-        else if (e.key === 'Delete') { clearCode(); }
-        else if (e.key === 'Enter') { submitCode(); }
-        else if (e.key === 'Escape') { closeModal(); }
-    });
-
-    // ============ SAHIFA YUKLANGANDA ============
-    window.addEventListener('load', () => {
-        preloadAllShorts();
-        
-        setTimeout(() => {
-            document.querySelectorAll('.sound-btn').forEach(btn => {
-                const videoId = btn.getAttribute('data-id');
-                btn.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    toggleSound(this, videoId);
-                });
-            });
-            
-            document.querySelectorAll('.like-btn').forEach(btn => {
-                btn.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    likeVideo(this);
-                });
-            });
-        }, 500);
-    });
-
-    document.addEventListener('visibilitychange', () => {
-        if (!document.hidden && currentVideo && currentVideo.paused) {
-            currentVideo.play().catch(e => console.log());
-        }
-    });
-</script>
-
-</body>
-</html>
+                <div class="action-btn clear" id="clearBtn">
