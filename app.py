@@ -1,6 +1,6 @@
 import os
 import sqlite3
-from flask import Flask, render_template, request, redirect, url_for, send_from_directory, Response, jsonify, stream_with_context
+from flask import Flask, render_template, request, redirect, url_for, send_from_directory, Response, jsonify
 from datetime import datetime
 
 app = Flask(__name__)
@@ -19,12 +19,10 @@ os.makedirs(os.path.join(BASE_DIR, 'static/uploads'), exist_ok=True)
 
 ADMIN_PASSWORD = 'admin123'
 
-# ============ DATABASE ============
 def init_db():
     db_path = os.path.join(BASE_DIR, 'database.db')
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
-    
     c.execute('''CREATE TABLE IF NOT EXISTS films (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         kod TEXT UNIQUE NOT NULL,
@@ -35,7 +33,6 @@ def init_db():
         rasm TEXT,
         fayl_nomi TEXT NOT NULL
     )''')
-    
     c.execute('''CREATE TABLE IF NOT EXISTS shorts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         sarlavha TEXT NOT NULL,
@@ -43,13 +40,11 @@ def init_db():
         fayl_nomi TEXT NOT NULL,
         sana TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )''')
-    
     c.execute('''CREATE TABLE IF NOT EXISTS yangi_filmlar (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         film_id INTEGER,
         afisha_sana TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )''')
-    
     conn.commit()
     conn.close()
     print("✅ DB tayyor!")
@@ -59,85 +54,7 @@ init_db()
 def allowed_file(filename, allowed):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed
 
-# ============ ULTRA TEZ SHORTS STREAMING (Range + Small Chunks) ============
-@app.route('/stream-shorts/<int:id>')
-def stream_shorts(id):
-    db_path = os.path.join(BASE_DIR, 'database.db')
-    conn = sqlite3.connect(db_path)
-    c = conn.cursor()
-    c.execute("SELECT fayl_nomi FROM shorts WHERE id = ?", (id,))
-    row = c.fetchone()
-    conn.close()
-
-    if not row:
-        return "Short topilmadi", 404
-
-    video_path = os.path.join(app.config['UPLOAD_FOLDER_SHORTS'], row[0])
-
-    if not os.path.exists(video_path):
-        return "Video topilmadi", 404
-
-    file_size = os.path.getsize(video_path)
-    range_header = request.headers.get('Range', None)
-
-    def generate_chunked(video_path, start, length, chunk_size=256*1024):
-        """256KB chunk - silliq o'ynatish uchun"""
-        with open(video_path, "rb") as f:
-            f.seek(start)
-            bytes_sent = 0
-            while bytes_sent < length:
-                chunk = f.read(min(chunk_size, length - bytes_sent))
-                if not chunk:
-                    break
-                bytes_sent += len(chunk)
-                yield chunk
-
-    if not range_header:
-        # Birinchi yuklash - faqat 1MB yuborish (darhol boshlanadi)
-        first_chunk_size = min(1024 * 1024, file_size)
-        response = Response(
-            generate_chunked(video_path, 0, first_chunk_size),
-            206,
-            mimetype="video/mp4"
-        )
-        response.headers["Content-Range"] = f"bytes 0-{first_chunk_size - 1}/{file_size}"
-        response.headers["Accept-Ranges"] = "bytes"
-        response.headers["Content-Length"] = str(first_chunk_size)
-        response.headers["Cache-Control"] = "public, max-age=31536000"
-        return response
-
-    # Range qo'llab-quvvatlash (oldinga/orqaga o'tish)
-    byte1, byte2 = 0, None
-    match = range_header.replace("bytes=", "").split("-")
-
-    if match[0]:
-        byte1 = int(match[0])
-
-    if len(match) > 1 and match[1]:
-        byte2 = int(match[1])
-
-    length = file_size - byte1
-    if byte2 is not None:
-        length = byte2 - byte1 + 1
-
-    # Chunklangan streaming
-    response = Response(
-        generate_chunked(video_path, byte1, length),
-        206,
-        mimetype="video/mp4"
-    )
-
-    response.headers.add(
-        "Content-Range",
-        f"bytes {byte1}-{byte1 + length - 1}/{file_size}"
-    )
-    response.headers.add("Accept-Ranges", "bytes")
-    response.headers.add("Content-Length", str(length))
-    response.headers.add("Cache-Control", "public, max-age=31536000")
-
-    return response
-
-# ============ ULTRA TEZ FILM STREAMING (QOTISH YO'Q) ============
+# ============ YOUTUBE STYLE FILM STREAMING ============
 @app.route('/stream/<kod>')
 def stream_video(kod):
     db_path = os.path.join(BASE_DIR, 'database.db')
@@ -151,46 +68,37 @@ def stream_video(kod):
         return "Film topilmadi!", 404
     
     video_path = os.path.join(app.config['UPLOAD_FOLDER_FILMS'], row[0])
-    
     if not os.path.exists(video_path):
         return "Video topilmadi!", 404
     
     file_size = os.path.getsize(video_path)
     range_header = request.headers.get('Range', None)
-
-    def generate_chunked_film(video_path, start, length, chunk_size=512*1024):
-        """512KB chunk - film uchun optimal"""
+    
+    def generate(video_path, start, length):
         with open(video_path, "rb") as f:
             f.seek(start)
-            bytes_sent = 0
-            while bytes_sent < length:
-                chunk = f.read(min(chunk_size, length - bytes_sent))
+            sent = 0
+            while sent < length:
+                chunk = f.read(1024 * 1024)  # 1MB chunks
                 if not chunk:
                     break
-                bytes_sent += len(chunk)
+                sent += len(chunk)
                 yield chunk
-
+    
     if not range_header:
-        # Birinchi yuklash - faqat 2MB yuborish (darhol boshlanadi)
-        first_chunk_size = min(2 * 1024 * 1024, file_size)
-        response = Response(
-            generate_chunked_film(video_path, 0, first_chunk_size),
-            206,
-            mimetype="video/mp4"
-        )
-        response.headers["Content-Range"] = f"bytes 0-{first_chunk_size - 1}/{file_size}"
+        # Birinchi 2MB darhol yuboriladi
+        first_chunk = 2 * 1024 * 1024
+        response = Response(generate(video_path, 0, min(first_chunk, file_size)), 206, mimetype="video/mp4")
+        response.headers["Content-Range"] = f"bytes 0-{min(first_chunk, file_size)-1}/{file_size}"
         response.headers["Accept-Ranges"] = "bytes"
-        response.headers["Content-Length"] = str(first_chunk_size)
-        response.headers["Cache-Control"] = "no-cache"
+        response.headers["Content-Length"] = str(min(first_chunk, file_size))
         return response
-
-    # Range qo'llab-quvvatlash
+    
+    # Range support (seeking)
     byte1, byte2 = 0, None
     match = range_header.replace("bytes=", "").split("-")
-    
     if match[0]:
         byte1 = int(match[0])
-    
     if len(match) > 1 and match[1]:
         byte2 = int(match[1])
     
@@ -198,16 +106,42 @@ def stream_video(kod):
     if byte2 is not None:
         length = byte2 - byte1 + 1
     
-    response = Response(
-        generate_chunked_film(video_path, byte1, length),
-        206,
-        mimetype="video/mp4"
-    )
+    response = Response(generate(video_path, byte1, length), 206, mimetype="video/mp4")
     response.headers.add("Content-Range", f"bytes {byte1}-{byte1 + length - 1}/{file_size}")
     response.headers.add("Accept-Ranges", "bytes")
     response.headers.add("Content-Length", str(length))
-    response.headers.add("Cache-Control", "no-cache")
+    return response
+
+# ============ INSTAGRAM/TIKTOK STYLE SHORTS ============
+@app.route('/stream-shorts/<int:id>')
+def stream_shorts(id):
+    db_path = os.path.join(BASE_DIR, 'database.db')
+    conn = sqlite3.connect(db_path)
+    c = conn.cursor()
+    c.execute("SELECT fayl_nomi FROM shorts WHERE id = ?", (id,))
+    row = c.fetchone()
+    conn.close()
     
+    if not row:
+        return "Short topilmadi", 404
+    
+    video_path = os.path.join(app.config['UPLOAD_FOLDER_SHORTS'], row[0])
+    if not os.path.exists(video_path):
+        return "Video topilmadi", 404
+    
+    file_size = os.path.getsize(video_path)
+    
+    def generate_fast(video_path):
+        with open(video_path, "rb") as f:
+            while True:
+                chunk = f.read(512 * 1024)  # 512KB chunks - instagram style
+                if not chunk:
+                    break
+                yield chunk
+    
+    response = Response(generate_fast(video_path), 200, mimetype="video/mp4")
+    response.headers["Accept-Ranges"] = "bytes"
+    response.headers["Cache-Control"] = "public, max-age=31536000"
     return response
 
 # ============ API ============
