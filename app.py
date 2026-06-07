@@ -59,7 +59,7 @@ init_db()
 def allowed_file(filename, allowed):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed
 
-# ============ SHORTS STREAMING ============
+# ============ OPTIMALLASHTIRILGAN SHORTS STREAMING (Range qo'llab-quvvatlaydi) ============
 @app.route('/stream-shorts/<int:id>')
 def stream_shorts(id):
     db_path = os.path.join(BASE_DIR, 'database.db')
@@ -68,25 +68,64 @@ def stream_shorts(id):
     c.execute("SELECT fayl_nomi FROM shorts WHERE id = ?", (id,))
     row = c.fetchone()
     conn.close()
-    
+
     if not row:
-        return "Short topilmadi!", 404
-    
+        return "Short topilmadi", 404
+
     video_path = os.path.join(app.config['UPLOAD_FOLDER_SHORTS'], row[0])
-    
+
     if not os.path.exists(video_path):
-        return "Video topilmadi!", 404
-    
-    def generate():
-        with open(video_path, 'rb') as f:
-            while True:
-                chunk = f.read(64 * 1024)
-                if not chunk:
-                    break
-                yield chunk
-    
-    response = Response(generate(), 200, mimetype='video/mp4')
-    response.headers.add('Cache-Control', 'public, max-age=31536000')
+        return "Video topilmadi", 404
+
+    file_size = os.path.getsize(video_path)
+    range_header = request.headers.get('Range', None)
+
+    if not range_header:
+        def generate():
+            with open(video_path, "rb") as f:
+                yield from f
+
+        response = Response(generate(), 200, mimetype="video/mp4")
+        response.headers["Content-Length"] = str(file_size)
+        response.headers["Accept-Ranges"] = "bytes"
+        response.headers["Cache-Control"] = "public, max-age=31536000"
+        return response
+
+    byte1, byte2 = 0, None
+
+    match = range_header.replace("bytes=", "").split("-")
+
+    if match[0]:
+        byte1 = int(match[0])
+
+    if len(match) > 1 and match[1]:
+        byte2 = int(match[1])
+
+    length = file_size - byte1
+
+    if byte2 is not None:
+        length = byte2 - byte1 + 1
+
+    with open(video_path, "rb") as f:
+        f.seek(byte1)
+        data = f.read(length)
+
+    response = Response(
+        data,
+        206,
+        mimetype="video/mp4",
+        direct_passthrough=True
+    )
+
+    response.headers.add(
+        "Content-Range",
+        f"bytes {byte1}-{byte1 + length - 1}/{file_size}"
+    )
+
+    response.headers.add("Accept-Ranges", "bytes")
+    response.headers.add("Content-Length", str(length))
+    response.headers.add("Cache-Control", "public, max-age=31536000")
+
     return response
 
 # ============ FILM STREAMING ============
@@ -107,18 +146,43 @@ def stream_video(kod):
     if not os.path.exists(video_path):
         return "Video topilmadi!", 404
     
-    def generate_fast():
-        with open(video_path, 'rb') as f:
-            first_chunk = f.read(1024 * 1024)
-            yield first_chunk
-            while True:
-                chunk = f.read(512 * 1024)
-                if not chunk:
-                    break
-                yield chunk
+    file_size = os.path.getsize(video_path)
+    range_header = request.headers.get('Range', None)
     
-    response = Response(generate_fast(), 200, mimetype='video/mp4')
-    response.headers.add('Cache-Control', 'no-cache')
+    if not range_header:
+        def generate():
+            with open(video_path, "rb") as f:
+                yield from f
+        
+        response = Response(generate(), 200, mimetype="video/mp4")
+        response.headers["Content-Length"] = str(file_size)
+        response.headers["Accept-Ranges"] = "bytes"
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+    
+    byte1, byte2 = 0, None
+    match = range_header.replace("bytes=", "").split("-")
+    
+    if match[0]:
+        byte1 = int(match[0])
+    
+    if len(match) > 1 and match[1]:
+        byte2 = int(match[1])
+    
+    length = file_size - byte1
+    if byte2 is not None:
+        length = byte2 - byte1 + 1
+    
+    with open(video_path, "rb") as f:
+        f.seek(byte1)
+        data = f.read(length)
+    
+    response = Response(data, 206, mimetype="video/mp4", direct_passthrough=True)
+    response.headers.add("Content-Range", f"bytes {byte1}-{byte1 + length - 1}/{file_size}")
+    response.headers.add("Accept-Ranges", "bytes")
+    response.headers.add("Content-Length", str(length))
+    response.headers.add("Cache-Control", "no-cache")
+    
     return response
 
 # ============ API ============
