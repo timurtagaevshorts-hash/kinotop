@@ -1,1 +1,27 @@
+version: '3.8'
 
+services:
+  kinotop:
+    build: .
+    container_name: kinotop
+    restart: always
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./static/uploads:/app/static/uploads
+      - ./database.db:/app/database.db
+    environment:
+      - PORT=8000
+    command: gunicorn --bind 0.0.0.0:8000 --workers 4 --threads 2 wsgi:application
+
+  nginx:
+    image: nginx:alpine
+    container_name: kinotop-nginx
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/kinotop.conf
+      - ./static:/var/www/kinotop/static
+    depends_on:
+      - kinotop
