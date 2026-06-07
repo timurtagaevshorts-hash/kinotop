@@ -19,6 +19,8 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
         }
         .header a { color: white; text-decoration: none; font-size: 1.2rem; font-weight: bold; }
         .download-btn {
@@ -46,23 +48,10 @@
         .description { color: #ccc; line-height: 1.5; margin-top: 15px; padding-top: 15px; border-top: 1px solid #333; }
         .back-btn { display: inline-block; margin-top: 20px; color: #667eea; text-decoration: none; }
         
-        .loading-indicator {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            background: rgba(0,0,0,0.7);
-            padding: 6px 12px;
-            border-radius: 20px;
-            color: white;
-            font-size: 0.7rem;
-            z-index: 10;
-            display: none;
-        }
-        
         @media (max-width: 768px) {
             .container { padding: 60px 12px 20px; }
             .info h1 { font-size: 1.2rem; }
-            .header { flex-direction: column; gap: 10px; }
+            .header { flex-direction: column; }
         }
     </style>
 </head>
@@ -78,7 +67,6 @@
         <video id="videoPlayer" controls autoplay preload="auto" playsinline>
             <source src="/stream/{{ film.kod }}" type="video/mp4">
         </video>
-        <div class="loading-indicator" id="loadingIndicator">🎬 Boshlanmoqda...</div>
     </div>
     
     <div class="info">
@@ -106,34 +94,14 @@
 
 <script>
     const video = document.getElementById('videoPlayer');
-    const loadingIndicator = document.getElementById('loadingIndicator');
     const downloadBtn = document.getElementById('downloadBtn');
     
-    // Video boshlanganda loading ni yashirish
-    video.addEventListener('play', () => {
-        loadingIndicator.style.display = 'none';
-    });
-    
-    video.addEventListener('waiting', () => {
-        loadingIndicator.style.display = 'block';
-        loadingIndicator.innerHTML = '⏳ Yuklanmoqda...';
-    });
+    // ULTRA TEZ: Video darhol boshlansin
+    video.load();
     
     video.addEventListener('canplay', () => {
-        loadingIndicator.style.display = 'none';
+        video.play().catch(e => console.log('Auto play blocked'));
     });
-    
-    video.addEventListener('playing', () => {
-        loadingIndicator.style.display = 'none';
-    });
-    
-    // Agar 1 soniyadan keyin video boshlanmasa
-    setTimeout(() => {
-        if (video.paused && video.readyState < 2) {
-            video.load();
-            video.play().catch(e => console.log('Auto play blocked'));
-        }
-    }, 1000);
     
     // Yuklab olish
     downloadBtn.addEventListener('click', () => {
