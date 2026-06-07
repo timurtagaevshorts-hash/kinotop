@@ -72,7 +72,7 @@ init_db()
 def allowed_file(filename, allowed):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed
 
-# ============ OPTIMIZED STREAMING WITH CACHE SUPPORT ============
+# ============ LIVE STREAMING STYLE VIDEO (Darhol boshlanadi) ============
 @app.route('/stream/<kod>')
 def stream_video(kod):
     db_path = os.path.join(BASE_DIR, 'database.db')
@@ -91,53 +91,23 @@ def stream_video(kod):
         return "Video topilmadi!", 404
     
     file_size = os.path.getsize(video_path)
-    range_header = request.headers.get('Range', None)
     
-    def generate_chunked(video_path, start, length, chunk_size=256*1024):
+    def generate_live():
+        """Live streaming - darhol boshlanadi, hech qanday kutish yo'q"""
+        chunk_size = 64 * 1024  # 64KB chunk
         with open(video_path, "rb") as f:
-            f.seek(start)
-            sent = 0
-            while sent < length:
-                chunk = f.read(min(chunk_size, length - sent))
+            while True:
+                chunk = f.read(chunk_size)
                 if not chunk:
                     break
-                sent += len(chunk)
                 yield chunk
     
-    if not range_header:
-        first_chunk = 256 * 1024
-        response = Response(
-            generate_chunked(video_path, 0, min(first_chunk, file_size)), 
-            206, 
-            mimetype="video/mp4"
-        )
-        response.headers["Content-Range"] = f"bytes 0-{min(first_chunk, file_size)-1}/{file_size}"
-        response.headers["Accept-Ranges"] = "bytes"
-        response.headers["Content-Length"] = str(min(first_chunk, file_size))
-        response.headers["Cache-Control"] = "public, max-age=86400"
-        response.headers["X-Accel-Buffering"] = "no"
-        response.headers["Content-Type"] = "video/mp4"
-        response.headers["Connection"] = "keep-alive"
-        return response
-    
-    byte1, byte2 = 0, None
-    match = range_header.replace("bytes=", "").split("-")
-    if match[0]:
-        byte1 = int(match[0])
-    if len(match) > 1 and match[1]:
-        byte2 = int(match[1])
-    
-    length = file_size - byte1
-    if byte2 is not None:
-        length = byte2 - byte1 + 1
-    
-    response = Response(generate_chunked(video_path, byte1, length), 206, mimetype="video/mp4")
-    response.headers.add("Content-Range", f"bytes {byte1}-{byte1 + length - 1}/{file_size}")
-    response.headers.add("Accept-Ranges", "bytes")
-    response.headers.add("Content-Length", str(length))
-    response.headers.add("Cache-Control", "public, max-age=86400")
-    response.headers.add("X-Accel-Buffering", "no")
-    response.headers.add("Connection", "keep-alive")
+    response = Response(generate_live(), 200, mimetype="video/mp4")
+    response.headers["Accept-Ranges"] = "bytes"
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["X-Accel-Buffering"] = "no"
+    response.headers["Content-Type"] = "video/mp4"
+    response.headers["Connection"] = "keep-alive"
     return response
 
 @app.route('/stream-shorts/<int:id>')
@@ -157,17 +127,17 @@ def stream_shorts(id):
     if not os.path.exists(video_path):
         return "Video topilmadi", 404
     
-    def generate():
+    def generate_live():
         with open(video_path, "rb") as f:
             while True:
-                chunk = f.read(128 * 1024)
+                chunk = f.read(64 * 1024)
                 if not chunk:
                     break
                 yield chunk
     
-    response = Response(generate(), 200, mimetype="video/mp4")
+    response = Response(generate_live(), 200, mimetype="video/mp4")
     response.headers["Accept-Ranges"] = "bytes"
-    response.headers["Cache-Control"] = "public, max-age=86400"
+    response.headers["Cache-Control"] = "no-cache, no-store"
     response.headers["X-Accel-Buffering"] = "no"
     return response
 
@@ -228,15 +198,11 @@ def check_film(kod):
     db_path = os.path.join(BASE_DIR, 'database.db')
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
-    c.execute("SELECT id, nomi, fayl_nomi FROM films WHERE kod = ?", (kod.upper(),))
+    c.execute("SELECT id, nomi FROM films WHERE kod = ?", (kod.upper(),))
     row = c.fetchone()
     conn.close()
     if row:
-        return jsonify({
-            "exists": True, 
-            "nomi": row[1],
-            "fayl_nomi": row[2]
-        }), 200
+        return jsonify({"exists": True, "nomi": row[1]}), 200
     return jsonify({"exists": False}), 404
 
 # ============ PUBLIC ROUTES ============
@@ -461,7 +427,7 @@ if __name__ == '__main__':
     print("""
     ╔══════════════════════════════════════════════════════════════════════════╗
     ║                                                                          ║
-    ║        🎬 KINOTOP - PROFESSIONAL EDITION 🎬                              ║
+    ║        🎬 KINOTOP - LIVE STREAMING STYLE 🎬                              ║
     ║                                                                          ║
     ╠══════════════════════════════════════════════════════════════════════════╣
     ║                                                                          ║
@@ -469,12 +435,12 @@ if __name__ == '__main__':
     ║  🔐 ADMIN:       /admin                                                  ║
     ║  📝 ADMIN PASS:  admin123                                                ║
     ║                                                                          ║
-    ║  ⚡ FEATURES:                                                             ║
-    ║     ✓ Loading animation (3-5 seconds)                                   ║
-    ║     ✓ Play button to start                                              ║
-    ║     ✓ Progressive streaming                                            ║
-    ║     ✓ Cache support (resume from saved position)                        ║
-    ║     ✓ Fast playback                                                     ║
+    ║  ⚡ LIVE FEATURES:                                                        ║
+    ║     ✓ Direct streaming (no waiting)                                     ║
+    ║     ✓ 64KB chunks for instant playback                                  ║
+    ║     ✓ No buffering delay                                                ║
+    ║     ✓ X-Accel-Buffering: no                                             ║
+    ║     ✓ Video starts IMMEDIATELY like live TV                             ║
     ║                                                                          ║
     ╚══════════════════════════════════════════════════════════════════════════╝
     """.format(port))
