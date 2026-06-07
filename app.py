@@ -5,14 +5,13 @@ from datetime import datetime
 
 app = Flask(__name__)
 
-# ============ KONFIGURATSIYA ============
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 app.config['UPLOAD_FOLDER_FILMS'] = os.path.join(BASE_DIR, 'static/uploads/films')
 app.config['UPLOAD_FOLDER_SHORTS'] = os.path.join(BASE_DIR, 'static/uploads/shorts')
 app.config['MAX_CONTENT_LENGTH'] = 4 * 1024 * 1024 * 1024
 
-ALLOWED_VIDEO = {'mp4', 'avi', 'mkv', 'mov', 'webm', 'm4v'}
-ALLOWED_IMAGE = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+ALLOWED_VIDEO = {'mp4', 'avi', 'mkv', 'mov', 'webm'}
+ALLOWED_IMAGE = {'png', 'jpg', 'jpeg', 'gif'}
 
 os.makedirs(app.config['UPLOAD_FOLDER_FILMS'], exist_ok=True)
 os.makedirs(app.config['UPLOAD_FOLDER_SHORTS'], exist_ok=True)
@@ -20,11 +19,12 @@ os.makedirs(os.path.join(BASE_DIR, 'static/uploads'), exist_ok=True)
 
 ADMIN_PASSWORD = 'admin123'
 
-# ============ MA'LUMOTLAR BAZASI ============
+# ============ DATABASE ============
 def init_db():
     db_path = os.path.join(BASE_DIR, 'database.db')
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
+    
     c.execute('''CREATE TABLE IF NOT EXISTS films (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         kod TEXT UNIQUE NOT NULL,
@@ -35,6 +35,7 @@ def init_db():
         rasm TEXT,
         fayl_nomi TEXT NOT NULL
     )''')
+    
     c.execute('''CREATE TABLE IF NOT EXISTS shorts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         sarlavha TEXT NOT NULL,
@@ -42,21 +43,23 @@ def init_db():
         fayl_nomi TEXT NOT NULL,
         sana TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )''')
+    
     c.execute('''CREATE TABLE IF NOT EXISTS yangi_filmlar (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         film_id INTEGER,
         afisha_sana TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )''')
+    
     conn.commit()
     conn.close()
-    print("✅ Ma'lumotlar bazasi tayyor!")
+    print("✅ DB tayyor!")
 
 init_db()
 
 def allowed_file(filename, allowed):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed
 
-# ============ ULTRA TEZ SHORTS STREAMING ============
+# ============ SHORTS STREAMING ============
 @app.route('/stream-shorts/<int:id>')
 def stream_shorts(id):
     db_path = os.path.join(BASE_DIR, 'database.db')
@@ -74,21 +77,19 @@ def stream_shorts(id):
     if not os.path.exists(video_path):
         return "Video topilmadi!", 404
     
-    # Kichik chunklar bilan tez yuklash
     def generate():
         with open(video_path, 'rb') as f:
             while True:
-                chunk = f.read(64 * 1024)  # 64KB - juda tez
+                chunk = f.read(64 * 1024)
                 if not chunk:
                     break
                 yield chunk
     
     response = Response(generate(), 200, mimetype='video/mp4')
     response.headers.add('Cache-Control', 'public, max-age=31536000')
-    response.headers.add('Content-Type', 'video/mp4')
     return response
 
-# ============ TEZ FILM STREAMING (Darhol boshlanadi) ============
+# ============ FILM STREAMING ============
 @app.route('/stream/<kod>')
 def stream_video(kod):
     db_path = os.path.join(BASE_DIR, 'database.db')
@@ -108,10 +109,8 @@ def stream_video(kod):
     
     def generate_fast():
         with open(video_path, 'rb') as f:
-            # Birinchi chunkni darhol yuborish
-            first_chunk = f.read(1024 * 1024)  # 1MB birinchi chunk
+            first_chunk = f.read(1024 * 1024)
             yield first_chunk
-            # Qolgan qismini streaming qilish
             while True:
                 chunk = f.read(512 * 1024)
                 if not chunk:
@@ -120,7 +119,6 @@ def stream_video(kod):
     
     response = Response(generate_fast(), 200, mimetype='video/mp4')
     response.headers.add('Cache-Control', 'no-cache')
-    response.headers.add('Accept-Ranges', 'bytes')
     return response
 
 # ============ API ============
@@ -185,21 +183,27 @@ def admin_film():
     parol = request.form.get('parol')
     if parol != ADMIN_PASSWORD:
         return "Parol xato!", 403
+    
     kod = request.form['kod'].strip().upper()
     nomi = request.form['nomi'].strip()
     tafsilot = request.form.get('tafsilot', '')
     yil = request.form.get('yil', '')
     janr = request.form.get('janr', '')
+    
     if 'film_fayl' not in request.files:
         return "Film fayli kerak!", 400
+    
     fayl = request.files['film_fayl']
     if fayl.filename == '':
         return "Fayl tanlanmagan!", 400
+    
     if not allowed_file(fayl.filename, ALLOWED_VIDEO):
         return "Video fayl kerak!", 400
+    
     ext = fayl.filename.rsplit('.', 1)[1].lower()
     yangi_nom = f"{kod}.{ext}"
     fayl.save(os.path.join(app.config['UPLOAD_FOLDER_FILMS'], yangi_nom))
+    
     rasm_nomi = None
     if 'rasm' in request.files:
         rasm = request.files['rasm']
@@ -207,9 +211,11 @@ def admin_film():
             rasm_ext = rasm.filename.rsplit('.', 1)[1].lower()
             rasm_nomi = f"{kod}.{rasm_ext}"
             rasm.save(os.path.join(BASE_DIR, 'static/uploads', rasm_nomi))
+    
     db_path = os.path.join(BASE_DIR, 'database.db')
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
+    
     try:
         c.execute("INSERT INTO films (kod, nomi, tafsilot, yil, janr, rasm, fayl_nomi) VALUES (?, ?, ?, ?, ?, ?, ?)",
                   (kod, nomi, tafsilot, yil, janr, rasm_nomi, yangi_nom))
@@ -217,9 +223,11 @@ def admin_film():
         c.execute("INSERT INTO yangi_filmlar (film_id) VALUES (?)", (film_id,))
         conn.commit()
     except sqlite3.IntegrityError:
+        os.remove(os.path.join(app.config['UPLOAD_FOLDER_FILMS'], yangi_nom))
         return "Bunday kod allaqachon mavjud!", 400
     finally:
         conn.close()
+    
     return redirect(url_for('admin', _method='POST', parol=parol))
 
 @app.route('/admin/shorts', methods=['POST'])
@@ -227,19 +235,25 @@ def admin_shorts():
     parol = request.form.get('parol')
     if parol != ADMIN_PASSWORD:
         return "Parol xato!", 403
+    
     sarlavha = request.form['sarlavha'].strip()
     tafsilot = request.form.get('tafsilot', '')
+    
     if 'short_fayl' not in request.files:
         return "Video fayl kerak!", 400
+    
     fayl = request.files['short_fayl']
     if fayl.filename == '':
         return "Fayl tanlanmagan!", 400
+    
     if not allowed_file(fayl.filename, ALLOWED_VIDEO):
         return "Video fayl kerak!", 400
+    
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     ext = fayl.filename.rsplit('.', 1)[1].lower()
     yangi_nom = f"short_{timestamp}.{ext}"
     fayl.save(os.path.join(app.config['UPLOAD_FOLDER_SHORTS'], yangi_nom))
+    
     db_path = os.path.join(BASE_DIR, 'database.db')
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
@@ -247,6 +261,7 @@ def admin_shorts():
               (sarlavha, tafsilot, yangi_nom))
     conn.commit()
     conn.close()
+    
     return redirect(url_for('admin', _method='POST', parol=parol))
 
 @app.route('/admin/film/delete/<int:id>', methods=['POST'])
@@ -254,11 +269,13 @@ def admin_film_delete(id):
     parol = request.form.get('parol')
     if parol != ADMIN_PASSWORD:
         return "Parol xato!", 403
+    
     db_path = os.path.join(BASE_DIR, 'database.db')
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
     c.execute("SELECT fayl_nomi, rasm FROM films WHERE id = ?", (id,))
     row = c.fetchone()
+    
     if row:
         fayl_nomi, rasm = row
         fayl_path = os.path.join(app.config['UPLOAD_FOLDER_FILMS'], fayl_nomi)
@@ -271,6 +288,7 @@ def admin_film_delete(id):
         c.execute("DELETE FROM yangi_filmlar WHERE film_id = ?", (id,))
         c.execute("DELETE FROM films WHERE id = ?", (id,))
         conn.commit()
+    
     conn.close()
     return redirect(url_for('admin', _method='POST', parol=parol))
 
@@ -279,11 +297,13 @@ def admin_shorts_delete(id):
     parol = request.form.get('parol')
     if parol != ADMIN_PASSWORD:
         return "Parol xato!", 403
+    
     db_path = os.path.join(BASE_DIR, 'database.db')
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
     c.execute("SELECT fayl_nomi FROM shorts WHERE id = ?", (id,))
     row = c.fetchone()
+    
     if row:
         fayl_nomi = row[0]
         fayl_path = os.path.join(app.config['UPLOAD_FOLDER_SHORTS'], fayl_nomi)
@@ -291,6 +311,7 @@ def admin_shorts_delete(id):
             os.remove(fayl_path)
         c.execute("DELETE FROM shorts WHERE id = ?", (id,))
         conn.commit()
+    
     conn.close()
     return redirect(url_for('admin', _method='POST', parol=parol))
 
