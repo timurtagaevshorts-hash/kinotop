@@ -54,7 +54,7 @@ init_db()
 def allowed_file(filename, allowed):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed
 
-# ============ YOUTUBE STYLE FILM STREAMING ============
+# ============ VIDEO STREAMING ============
 @app.route('/stream/<kod>')
 def stream_video(kod):
     db_path = os.path.join(BASE_DIR, 'database.db')
@@ -79,14 +79,13 @@ def stream_video(kod):
             f.seek(start)
             sent = 0
             while sent < length:
-                chunk = f.read(1024 * 1024)  # 1MB chunks
+                chunk = f.read(1024 * 1024)
                 if not chunk:
                     break
                 sent += len(chunk)
                 yield chunk
     
     if not range_header:
-        # Birinchi 2MB darhol yuboriladi
         first_chunk = 2 * 1024 * 1024
         response = Response(generate(video_path, 0, min(first_chunk, file_size)), 206, mimetype="video/mp4")
         response.headers["Content-Range"] = f"bytes 0-{min(first_chunk, file_size)-1}/{file_size}"
@@ -94,7 +93,6 @@ def stream_video(kod):
         response.headers["Content-Length"] = str(min(first_chunk, file_size))
         return response
     
-    # Range support (seeking)
     byte1, byte2 = 0, None
     match = range_header.replace("bytes=", "").split("-")
     if match[0]:
@@ -112,7 +110,6 @@ def stream_video(kod):
     response.headers.add("Content-Length", str(length))
     return response
 
-# ============ INSTAGRAM/TIKTOK STYLE SHORTS ============
 @app.route('/stream-shorts/<int:id>')
 def stream_shorts(id):
     db_path = os.path.join(BASE_DIR, 'database.db')
@@ -129,12 +126,10 @@ def stream_shorts(id):
     if not os.path.exists(video_path):
         return "Video topilmadi", 404
     
-    file_size = os.path.getsize(video_path)
-    
     def generate_fast(video_path):
         with open(video_path, "rb") as f:
             while True:
-                chunk = f.read(512 * 1024)  # 512KB chunks - instagram style
+                chunk = f.read(512 * 1024)
                 if not chunk:
                     break
                 yield chunk
@@ -157,7 +152,7 @@ def check_film(kod):
         return jsonify({"exists": True}), 200
     return jsonify({"exists": False}), 404
 
-# ============ FOYDALANUVCHI SAHIFALARI ============
+# ============ SAHIFALAR ============
 @app.route('/')
 def index():
     db_path = os.path.join(BASE_DIR, 'database.db')
@@ -182,7 +177,7 @@ def film(kod):
     film = {'id': row[0], 'kod': row[1], 'nomi': row[2], 'tafsilot': row[3], 'yil': row[4], 'janr': row[5], 'rasm': row[6], 'fayl_nomi': row[7]}
     return render_template('film.html', film=film)
 
-# ============ ADMIN PANEL ============
+# ============ ADMIN ============
 @app.route('/admin', methods=['GET', 'POST'])
 def admin():
     if request.method == 'POST':
