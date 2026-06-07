@@ -1,4 +1,1 @@
-echo "3.12" > .python-version
-git add .python-version
-git commit -m "Add .python-version"
-git push
+3.12
