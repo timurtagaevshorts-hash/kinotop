@@ -20,6 +20,101 @@
             position: fixed;
         }
 
+        /* PRELOADER ANIMATSIYA */
+        .preloader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+
+        .preloader.hide {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .preloader-content {
+            text-align: center;
+            animation: fadeInUp 1s ease;
+        }
+
+        .preloader-logo {
+            font-size: 5rem;
+            animation: bounce 1s ease infinite;
+        }
+
+        .preloader-title {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #fff 0%, #a8b2ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 20px 0;
+        }
+
+        .preloader-subtitle {
+            color: rgba(255,255,255,0.7);
+            font-size: 1rem;
+            margin-bottom: 30px;
+        }
+
+        .start-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+            padding: 15px 40px;
+            border-radius: 50px;
+            color: white;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+            animation: pulse 1.5s infinite;
+        }
+
+        .start-btn:active {
+            transform: scale(0.95);
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes bounce {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-15px);
+            }
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(102,126,234,0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 15px rgba(102,126,234,0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(102,126,234,0);
+            }
+        }
+
+        /* SHORTS CONTAINER */
         .shorts-container {
             position: relative;
             width: 100%;
@@ -29,6 +124,7 @@
             scroll-behavior: smooth;
             background: #000;
             -webkit-overflow-scrolling: touch;
+            visibility: visible;
         }
 
         .shorts-container::-webkit-scrollbar {
@@ -108,6 +204,26 @@
             transform: scale(0.9);
         }
 
+        /* Loading indicator for shorts */
+        .short-loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            z-index: 15;
+            display: none;
+        }
+
+        @keyframes spin {
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
         /* FLOATING CODE INPUT */
         .code-bar {
             position: fixed;
@@ -163,6 +279,11 @@
         .code-text p {
             color: rgba(255,255,255,0.5);
             font-size: 0.7rem;
+        }
+
+        .code-arrow {
+            color: rgba(255,255,255,0.5);
+            font-size: 1.2rem;
         }
 
         /* MODAL OVERLAY */
@@ -326,9 +447,32 @@
             text-decoration: none;
             font-size: 1rem;
         }
+
+        .no-shorts {
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-align: center;
+            background: linear-gradient(135deg, #0f0c29, #302b63);
+            flex-direction: column;
+            gap: 15px;
+        }
     </style>
 </head>
 <body>
+
+<!-- PRELOADER ANIMATSIYA -->
+<div class="preloader" id="preloader">
+    <div class="preloader-content">
+        <div class="preloader-logo">🎬</div>
+        <div class="preloader-title">KINOTOP</div>
+        <div class="preloader-subtitle">Eng yangi va qiziqarli kinolar</div>
+        <button class="start-btn" id="startBtn">🎥 Videoni ko'rishni boshlash</button>
+    </div>
+</div>
 
 <div class="logo">
     <span>🎬 KINOTOP</span>
@@ -336,13 +480,14 @@
 
 <a href="/admin" class="admin-btn">🔐</a>
 
-<div class="shorts-container" id="shortsContainer">
+<div class="shorts-container" id="shortsContainer" style="display: none;">
     {% if shorts %}
         {% for short in shorts %}
         <div class="short-video" data-id="{{ short.id }}" data-index="{{ loop.index0 }}">
             <video preload="auto" playsinline webkit-playsinline muted loop>
                 <source src="/stream-shorts/{{ short.id }}" type="video/mp4">
             </video>
+            <div class="short-loading" id="loading-{{ short.id }}"></div>
             <div class="short-info">
                 <div class="short-title">{{ short.sarlavha }}</div>
                 <div class="short-desc">{{ short.tafsilot or 'Qiziqarli video' }}</div>
@@ -412,78 +557,123 @@
 </div>
 
 <script>
-    // ============ ULTRA TEZ SHORTS PLAYER ============
+    // ============ PRELOADER VA BARCHA SHORTSLARNI OLDINDAN YUKLASH ============
+    const preloader = document.getElementById('preloader');
+    const startBtn = document.getElementById('startBtn');
     const shortsContainer = document.getElementById('shortsContainer');
-    const allVideos = document.querySelectorAll('.short-video');
-    let currentIndex = 0;
-    let currentVideo = null;
-    let preloadedCount = 0;
-    const PRELOAD_COUNT = 3; // Oldindan 3 ta video yuklash
+    let allVideos = [];
+    let videosLoaded = false;
+    let loadingComplete = false;
 
-    // Barcha videolarni oldindan yuklash (fonda)
-    function preloadAllVideos() {
-        allVideos.forEach((item, idx) => {
-            const video = item.querySelector('video');
-            if (video) {
-                video.load();
-                // Fonda yuklash
-                if (idx > 0) {
-                    video.preload = 'auto';
-                }
-            }
+    // Barcha shortslarni oldindan yuklash (fonda)
+    function preloadAllShortsInBackground() {
+        const videoElements = document.querySelectorAll('.short-video video');
+        allVideos = Array.from(videoElements);
+        
+        allVideos.forEach((video, index) => {
+            // Yuklanishni boshlash
+            video.load();
+            
+            // Yuklanish holatini tekshirish
+            video.addEventListener('canplaythrough', () => {
+                console.log(`Video ${index + 1} tayyor`);
+            });
+            
+            // Xatolik bo'lsa ham davom et
+            video.addEventListener('error', () => {
+                console.log(`Video ${index + 1} yuklanmadi, lekin davom`);
+            });
         });
+        
+        loadingComplete = true;
     }
 
-    // Faqat ko'rinayotgan videoni o'ynatish
+    // Birinchi videoni tayyorlash
+    function prepareFirstVideo() {
+        if (allVideos.length > 0) {
+            const firstVideo = allVideos[0];
+            firstVideo.muted = false;
+            firstVideo.play().catch(e => console.log('Auto play blocked'));
+            
+            // Sound button yangilash
+            const firstSoundBtn = document.querySelector('.sound-btn');
+            if (firstSoundBtn) firstSoundBtn.innerHTML = '🔊';
+        }
+    }
+
+    // Shorts player funksiyalari
+    let currentIndex = 0;
+    let currentVideo = null;
+
     function playCurrentVideoOnly() {
-        // Barcha videolarni to'xtatish va ovozni o'chirish
-        allVideos.forEach((item) => {
-            const video = item.querySelector('video');
-            const soundBtn = item.querySelector('.sound-btn');
-            if (video) {
-                video.pause();
-                video.muted = true;
-                video.currentTime = 0;
-            }
+        allVideos.forEach((video) => {
+            const parent = video.closest('.short-video');
+            const soundBtn = parent?.querySelector('.sound-btn');
+            video.pause();
+            video.muted = true;
             if (soundBtn) soundBtn.innerHTML = '🔇';
         });
         
-        // Hozirgi videoni o'ynatish
-        const currentItem = allVideos[currentIndex];
-        if (currentItem) {
-            currentVideo = currentItem.querySelector('video');
-            const soundBtn = currentItem.querySelector('.sound-btn');
+        if (allVideos[currentIndex]) {
+            currentVideo = allVideos[currentIndex];
+            const parent = currentVideo.closest('.short-video');
+            const soundBtn = parent?.querySelector('.sound-btn');
             
-            if (currentVideo) {
-                currentVideo.muted = false;
-                currentVideo.play().then(() => {
-                    if (soundBtn) soundBtn.innerHTML = '🔊';
-                }).catch(e => console.log('Play error:', e));
-            }
-        }
-        
-        // Keyingi videolarni oldindan yuklash
-        preloadNextVideos();
-    }
-
-    // Keyingi videolarni oldindan yuklash
-    function preloadNextVideos() {
-        for (let i = 1; i <= PRELOAD_COUNT; i++) {
-            const nextIndex = currentIndex + i;
-            if (nextIndex < allVideos.length) {
-                const nextVideo = allVideos[nextIndex].querySelector('video');
-                if (nextVideo && nextVideo.readyState < 2) {
-                    nextVideo.load();
-                }
-            }
+            currentVideo.muted = false;
+            currentVideo.play().catch(e => console.log('Play error'));
+            if (soundBtn) soundBtn.innerHTML = '🔊';
         }
     }
 
-    // Scroll bo'yicha indeks aniqlash
     function getCurrentIndex() {
         const scrollTop = shortsContainer.scrollTop;
         const itemHeight = window.innerHeight;
         return Math.round(scrollTop / itemHeight);
+    }
+
+    // Scroll event
+    let scrollTimeout;
+    shortsContainer.addEventListener('scroll', () => {
+        if (scrollTimeout) clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(() => {
+            const newIndex = getCurrentIndex();
+            if (newIndex !== currentIndex && newIndex >= 0 && newIndex < allVideos.length) {
+                currentIndex = newIndex;
+                playCurrentVideoOnly();
+            }
+        }, 50);
+    });
+
+    // Touch event
+    let touchStartY = 0;
+    shortsContainer.addEventListener('touchstart', (e) => {
+        touchStartY = e.touches[0].clientY;
+    });
+    
+    shortsContainer.addEventListener('touchend', (e) => {
+        const touchEndY = e.changedTouches[0].clientY;
+        const diff = touchStartY - touchEndY;
+        if (Math.abs(diff) > 30) {
+            setTimeout(() => {
+                const newIndex = getCurrentIndex();
+                if (newIndex !== currentIndex) {
+                    currentIndex = newIndex;
+                    playCurrentVideoOnly();
+                }
+            }, 100);
+        }
+    });
+
+    // Video tugaganda qayta ijro (avtomatik otmasin)
+    function setupVideoLoop() {
+        allVideos.forEach((video, idx) => {
+            video.addEventListener('ended', () => {
+                if (idx === currentIndex) {
+                    video.currentTime = 0;
+                    video.play().catch(e => console.log('Replay error'));
+                }
+            });
+        });
     }
 
     // Ovozni yoqish/o'chirish
@@ -513,57 +703,22 @@
         }, 1000);
     }
 
-    // Scroll event - tez va silliq
-    let scrollTimeout;
-    shortsContainer.addEventListener('scroll', () => {
-        if (scrollTimeout) clearTimeout(scrollTimeout);
-        scrollTimeout = setTimeout(() => {
-            const newIndex = getCurrentIndex();
-            if (newIndex !== currentIndex && newIndex >= 0 && newIndex < allVideos.length) {
-                currentIndex = newIndex;
-                playCurrentVideoOnly();
+    // ============ START TUGMASI BOSILGANDA ============
+    startBtn.addEventListener('click', () => {
+        // Preloader ni yashirish
+        preloader.classList.add('hide');
+        
+        // Shorts container ni ko'rsatish
+        shortsContainer.style.display = 'block';
+        
+        // Birinchi videoni o'ynatish
+        setTimeout(() => {
+            if (allVideos.length > 0) {
+                prepareFirstVideo();
+                setupVideoLoop();
             }
-        }, 30);
+        }, 100);
     });
-
-    // Touch event (mobil uchun)
-    let touchStartY = 0;
-    shortsContainer.addEventListener('touchstart', (e) => {
-        touchStartY = e.touches[0].clientY;
-    });
-    
-    shortsContainer.addEventListener('touchend', (e) => {
-        const touchEndY = e.changedTouches[0].clientY;
-        const diff = touchStartY - touchEndY;
-        if (Math.abs(diff) > 30) {
-            setTimeout(() => {
-                const newIndex = getCurrentIndex();
-                if (newIndex !== currentIndex) {
-                    currentIndex = newIndex;
-                    playCurrentVideoOnly();
-                }
-            }, 50);
-        }
-    });
-
-    // Video tugaganda keyingisiga o'tish
-    function setupVideoEnded() {
-        allVideos.forEach((item, idx) => {
-            const video = item.querySelector('video');
-            if (video) {
-                video.addEventListener('ended', () => {
-                    if (idx === currentIndex && idx + 1 < allVideos.length) {
-                        const nextElement = allVideos[idx + 1];
-                        nextElement.scrollIntoView({ behavior: 'smooth' });
-                        setTimeout(() => {
-                            currentIndex = idx + 1;
-                            playCurrentVideoOnly();
-                        }, 200);
-                    }
-                });
-            }
-        });
-    }
 
     // ============ KOD KIRITISH FUNKSIYALARI ============
     let currentCode = '';
@@ -608,7 +763,6 @@
         window.location.href = `/film/${kod}`;
     }
 
-    // Numpad eventlari
     document.querySelectorAll('.numpad-btn').forEach(btn => {
         const value = btn.getAttribute('data-value');
         if (value && value.trim() !== '') {
@@ -620,7 +774,6 @@
     backspaceBtn.addEventListener('click', backspace);
     watchSubmitBtn.addEventListener('click', submitCode);
 
-    // Modal ochish/yopish
     openModalBtn.addEventListener('click', () => {
         modalOverlay.classList.add('show');
         codeBar.classList.add('hidden');
@@ -640,7 +793,6 @@
         }
     });
 
-    // Klaviatura qo'llab-quvvatlash
     document.addEventListener('keydown', (e) => {
         if (!modalOverlay.classList.contains('show')) return;
         
@@ -657,52 +809,34 @@
         }
     });
 
-    // ============ BOSHLASH ============
+    // ============ SAHIFA YUKLANGANDA ============
     window.addEventListener('load', () => {
-        // Barcha videolarni oldindan yuklash
-        preloadAllVideos();
+        // Barcha shortslarni fonda yuklash
+        preloadAllShortsInBackground();
         
-        // Ovoz tugmalariga event qo'shish
-        document.querySelectorAll('.sound-btn').forEach(btn => {
-            const videoId = btn.getAttribute('data-id');
-            btn.addEventListener('click', function(e) {
-                e.stopPropagation();
-                toggleSound(this, videoId);
-            });
-        });
-        
-        // Like tugmalariga event qo'shish
-        document.querySelectorAll('.like-btn').forEach(btn => {
-            btn.addEventListener('click', function(e) {
-                e.stopPropagation();
-                likeVideo(this);
-            });
-        });
-        
-        // Birinchi videoni o'ynatish
+        // Sound va like tugmalariga event qo'shish
         setTimeout(() => {
-            currentIndex = 0;
-            playCurrentVideoOnly();
-            setupVideoEnded();
-        }, 100);
-        
-        // Qolgan videolarni fonda yuklash
-        setTimeout(() => {
-            for (let i = 1; i < allVideos.length; i++) {
-                const video = allVideos[i].querySelector('video');
-                if (video && video.readyState < 2) {
-                    video.load();
-                }
-            }
-        }, 1000);
+            document.querySelectorAll('.sound-btn').forEach(btn => {
+                const videoId = btn.getAttribute('data-id');
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    toggleSound(this, videoId);
+                });
+            });
+            
+            document.querySelectorAll('.like-btn').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    likeVideo(this);
+                });
+            });
+        }, 500);
     });
 
     // Backgroundda yuklash davom etsin
     document.addEventListener('visibilitychange', () => {
-        if (!document.hidden) {
-            if (currentVideo && currentVideo.paused) {
-                currentVideo.play().catch(e => console.log());
-            }
+        if (!document.hidden && currentVideo && currentVideo.paused) {
+            currentVideo.play().catch(e => console.log());
         }
     });
 </script>
