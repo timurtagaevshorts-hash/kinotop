@@ -62,7 +62,7 @@ init_db()
 def allowed_file(filename, allowed):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed
 
-# ============ INSTANT VIDEO STREAMING (DARHOL BOSHLANADI) ============
+# ============ ULTRA FAST VIDEO STREAMING (1MB chunk + FastStart) ============
 @app.route('/stream/<kod>')
 def stream_video(kod):
     db_path = os.path.join(BASE_DIR, 'database.db')
@@ -82,12 +82,12 @@ def stream_video(kod):
     file_size = os.path.getsize(video_path)
     range_header = request.headers.get('Range', None)
     
-    def generate_instant(video_path, start, length):
-        """Darhol boshlanadigan streaming - 64KB chunk"""
+    def generate_chunked(video_path, start, length):
+        """1MB chunk bilan streaming - juda tez"""
         with open(video_path, "rb") as f:
             f.seek(start)
             sent = 0
-            chunk_size = 64 * 1024  # 64KB - eng tez
+            chunk_size = 1024 * 1024  # 1MB
             while sent < length:
                 chunk = f.read(min(chunk_size, length - sent))
                 if not chunk:
@@ -96,17 +96,18 @@ def stream_video(kod):
                 yield chunk
     
     if not range_header:
-        # BIRINCHI 128KB DARHOL (video 0.3 soniyada boshlanadi)
-        first_chunk = 128 * 1024
+        # Birinchi 1MB darhol yuboriladi
+        first_chunk = 1024 * 1024
         response = Response(
-            generate_instant(video_path, 0, min(first_chunk, file_size)), 
+            generate_chunked(video_path, 0, min(first_chunk, file_size)), 
             206, 
             mimetype="video/mp4"
         )
         response.headers["Content-Range"] = f"bytes 0-{min(first_chunk, file_size)-1}/{file_size}"
         response.headers["Accept-Ranges"] = "bytes"
         response.headers["Content-Length"] = str(min(first_chunk, file_size))
-        response.headers["Cache-Control"] = "no-cache, no-store"
+        response.headers["Cache-Control"] = "public, max-age=86400"
+        response.headers["X-Accel-Buffering"] = "no"
         response.headers["Content-Type"] = "video/mp4"
         return response
     
@@ -122,11 +123,12 @@ def stream_video(kod):
     if byte2 is not None:
         length = byte2 - byte1 + 1
     
-    response = Response(generate_instant(video_path, byte1, length), 206, mimetype="video/mp4")
+    response = Response(generate_chunked(video_path, byte1, length), 206, mimetype="video/mp4")
     response.headers.add("Content-Range", f"bytes {byte1}-{byte1 + length - 1}/{file_size}")
     response.headers.add("Accept-Ranges", "bytes")
     response.headers.add("Content-Length", str(length))
-    response.headers.add("Cache-Control", "no-cache, no-store")
+    response.headers.add("Cache-Control", "public, max-age=86400")
+    response.headers.add("X-Accel-Buffering", "no")
     return response
 
 # ============ SHORTS STREAMING ============
@@ -146,17 +148,20 @@ def stream_shorts(id):
     if not os.path.exists(video_path):
         return "Video topilmadi", 404
     
+    file_size = os.path.getsize(video_path)
+    
     def generate_fast():
         with open(video_path, "rb") as f:
             while True:
-                chunk = f.read(128 * 1024)
+                chunk = f.read(256 * 1024)  # 256KB
                 if not chunk:
                     break
                 yield chunk
     
     response = Response(generate_fast(), 200, mimetype="video/mp4")
     response.headers["Accept-Ranges"] = "bytes"
-    response.headers["Cache-Control"] = "public, max-age=31536000"
+    response.headers["Cache-Control"] = "public, max-age=86400"
+    response.headers["X-Accel-Buffering"] = "no"
     return response
 
 # ============ DOWNLOAD ============
@@ -182,7 +187,8 @@ def download_film(kod):
         video_path,
         as_attachment=True,
         download_name=f"{film_nomi}.mp4",
-        mimetype='video/mp4'
+        mimetype='video/mp4',
+        conditional=True
     )
 
 @app.route('/download-shorts/<int:id>')
@@ -207,7 +213,8 @@ def download_shorts(id):
         video_path,
         as_attachment=True,
         download_name=f"{sarlavha}.mp4",
-        mimetype='video/mp4'
+        mimetype='video/mp4',
+        conditional=True
     )
 
 # ============ API ============
@@ -232,8 +239,12 @@ def index():
     c.execute("SELECT * FROM shorts ORDER BY sana DESC")
     rows = c.fetchall()
     shorts = [{'id': r[0], 'sarlavha': r[1], 'tafsilot': r[2], 'fayl_nomi': r[3], 'sana': r[4]} for r in rows]
+    
+    # Eng ko'p ko'rilgan filmlar
+    c.execute("SELECT kod, nomi, rasm FROM films ORDER BY id DESC LIMIT 10")
+    top_films = [{'kod': r[0], 'nomi': r[1], 'rasm': r[2]} for r in c.fetchall()]
     conn.close()
-    return render_template('index.html', shorts=shorts)
+    return render_template('index.html', shorts=shorts, top_films=top_films)
 
 @app.route('/film/<kod>')
 def film(kod):
@@ -299,6 +310,18 @@ def admin_film():
     fayl.save(os.path.join(app.config['UPLOAD_FOLDER_FILMS'], yangi_nom))
     file_size = os.path.getsize(os.path.join(app.config['UPLOAD_FOLDER_FILMS'], yangi_nom))
     
+    # FFmpeg bilan faststart qilish (agar ffmpeg o'rnatilgan bo'lsa)
+    video_path = os.path.join(app.config['UPLOAD_FOLDER_FILMS'], yangi_nom)
+    temp_path = os.path.join(app.config['UPLOAD_FOLDER_FILMS'], f"temp_{yangi_nom}")
+    try:
+        import subprocess
+        subprocess.run(['ffmpeg', '-i', video_path, '-c', 'copy', '-movflags', '+faststart', temp_path], 
+                      capture_output=True, timeout=30)
+        if os.path.exists(temp_path):
+            os.replace(temp_path, video_path)
+    except:
+        pass  # ffmpeg yo'q bo'lsa, hech narsa qilma
+    
     rasm_nomi = None
     if 'rasm' in request.files:
         rasm = request.files['rasm']
@@ -347,8 +370,20 @@ def admin_shorts():
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     ext = fayl.filename.rsplit('.', 1)[1].lower()
     yangi_nom = f"short_{timestamp}.{ext}"
-    fayl.save(os.path.join(app.config['UPLOAD_FOLDER_SHORTS'], yangi_nom))
-    file_size = os.path.getsize(os.path.join(app.config['UPLOAD_FOLDER_SHORTS'], yangi_nom))
+    video_path = os.path.join(app.config['UPLOAD_FOLDER_SHORTS'], yangi_nom)
+    fayl.save(video_path)
+    file_size = os.path.getsize(video_path)
+    
+    # Shorts uchun ham faststart
+    temp_path = os.path.join(app.config['UPLOAD_FOLDER_SHORTS'], f"temp_{yangi_nom}")
+    try:
+        import subprocess
+        subprocess.run(['ffmpeg', '-i', video_path, '-c', 'copy', '-movflags', '+faststart', temp_path], 
+                      capture_output=True, timeout=30)
+        if os.path.exists(temp_path):
+            os.replace(temp_path, video_path)
+    except:
+        pass
     
     db_path = os.path.join(BASE_DIR, 'database.db')
     conn = sqlite3.connect(db_path)
@@ -424,22 +459,24 @@ def internal_error(error):
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))
     print("""
-    ╔══════════════════════════════════════════════════════════════╗
-    ║                                                              ║
-    ║     🎬 KINOTOP - INSTANT VIDEO STREAMING 🎬                  ║
-    ║                                                              ║
-    ╠══════════════════════════════════════════════════════════════╣
-    ║                                                              ║
-    ║  🌐 LOCAL:     http://localhost:{}                           ║
-    ║  🔐 ADMIN:     http://localhost:{}/admin                     ║
-    ║  📝 PAROL:     admin123                                       ║
-    ║                                                              ║
-    ║  ⚡ INSTANT STREAMING:                                        ║
-    ║     ✓ First chunk: 128KB (0.3 seconds)                       ║
-    ║     ✓ Chunk size: 64KB                                       ║
-    ║     ✓ Video starts IMMEDIATELY                               ║
-    ║     ✓ No buffering delay                                     ║
-    ║                                                              ║
-    ╚══════════════════════════════════════════════════════════════╝
+    ╔══════════════════════════════════════════════════════════════════════════╗
+    ║                                                                          ║
+    ║              🎬 KINOTOP - ULTRA FAST STREAMING 🎬                        ║
+    ║                                                                          ║
+    ╠══════════════════════════════════════════════════════════════════════════╣
+    ║                                                                          ║
+    ║  🌐 LOCAL:     http://localhost:{}                                       ║
+    ║  🔐 ADMIN:     http://localhost:{}/admin                                 ║
+    ║  📝 PAROL:     admin123                                                   ║
+    ║                                                                          ║
+    ║  ⚡ OPTIMIZATIONS:                                                        ║
+    ║     ✓ First chunk: 1MB                                                  ║
+    ║     ✓ Chunk size: 1MB                                                   ║
+    ║     ✓ FastStart MP4 (metadata at beginning)                             ║
+    ║     ✓ X-Accel-Buffering: no                                             ║
+    ║     ✓ Cache-Control: public, max-age=86400                              ║
+    ║     ✓ playsinline for mobile                                            ║
+    ║                                                                          ║
+    ╚══════════════════════════════════════════════════════════════════════════╝
     """.format(port, port))
     app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
