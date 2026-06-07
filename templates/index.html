@@ -5,10 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Kinotop | Shorts</title>
     <link rel="manifest" href="/static/manifest.json">
-    <link rel="apple-touch-icon" href="/static/icon-192.png">
-    <meta name="theme-color" content="#667eea">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#000000">
     <style>
         * {
             margin: 0;
@@ -25,7 +22,7 @@
             position: fixed;
         }
 
-        /* PRELOADER ANIMATSIYA - 3 SONIYA */
+        /* PRELOADER */
         .preloader {
             position: fixed;
             top: 0;
@@ -37,7 +34,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: opacity 0.5s ease, visibility 0.5s ease;
+            transition: opacity 0.5s;
         }
 
         .preloader.hide {
@@ -47,7 +44,7 @@
 
         .preloader-content {
             text-align: center;
-            animation: fadeInUp 1s ease;
+            animation: fadeInUp 0.8s ease;
         }
 
         .preloader-logo {
@@ -58,16 +55,10 @@
         .preloader-title {
             font-size: 2.5rem;
             font-weight: 800;
-            background: linear-gradient(135deg, #fff 0%, #a8b2ff 100%);
+            background: linear-gradient(135deg, #fff, #a8b2ff);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             margin: 20px 0;
-        }
-
-        .preloader-subtitle {
-            color: rgba(255,255,255,0.7);
-            font-size: 1rem;
-            margin-bottom: 30px;
         }
 
         .start-btn {
@@ -79,12 +70,7 @@
             font-size: 1.1rem;
             font-weight: 600;
             cursor: pointer;
-            transition: transform 0.3s, box-shadow 0.3s;
-            animation: pulse 1.5s infinite;
-        }
-
-        .start-btn:active {
-            transform: scale(0.95);
+            margin-top: 20px;
         }
 
         @keyframes fadeInUp {
@@ -97,13 +83,7 @@
             50% { transform: translateY(-15px); }
         }
 
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(102,126,234,0.7); }
-            70% { box-shadow: 0 0 0 15px rgba(102,126,234,0); }
-            100% { box-shadow: 0 0 0 0 rgba(102,126,234,0); }
-        }
-
-        /* SHORTS CONTAINER */
+        /* SHORTS CONTAINER - INSTAGRAM/TIKTOK STYLE */
         .shorts-container {
             position: relative;
             width: 100%;
@@ -113,10 +93,11 @@
             scroll-behavior: smooth;
             background: #000;
             -webkit-overflow-scrolling: touch;
-            visibility: visible;
         }
 
-        .shorts-container::-webkit-scrollbar { display: none; }
+        .shorts-container::-webkit-scrollbar {
+            display: none;
+        }
 
         .short-video {
             position: relative;
@@ -127,14 +108,12 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            overflow: hidden;
         }
 
         .short-video video {
             width: 100%;
             height: 100%;
-            object-fit: contain;
-            background: #000;
+            object-fit: cover;
         }
 
         .short-info {
@@ -143,7 +122,7 @@
             left: 16px;
             right: 80px;
             z-index: 10;
-            background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%);
+            background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
             padding: 20px 15px;
             border-radius: 15px;
         }
@@ -153,13 +132,11 @@
             font-size: 1rem;
             font-weight: 600;
             margin-bottom: 5px;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
         }
 
         .short-desc {
             color: rgba(255,255,255,0.8);
             font-size: 0.8rem;
-            text-shadow: 0 1px 1px rgba(0,0,0,0.5);
         }
 
         .overlay-buttons {
@@ -184,24 +161,18 @@
             color: white;
             font-size: 1.2rem;
             cursor: pointer;
-            transition: transform 0.2s;
         }
 
-        .overlay-btn:active { transform: scale(0.9); }
-
+        /* CODE BAR */
         .code-bar {
             position: fixed;
             bottom: 0;
             left: 0;
             right: 0;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-            border-top: 2px solid #667eea;
+            background: rgba(0,0,0,0.9);
+            border-top: 1px solid rgba(255,255,255,0.1);
             z-index: 100;
-            transform: translateY(0);
-            transition: transform 0.3s ease;
         }
-
-        .code-bar.hidden { transform: translateY(100%); }
 
         .code-button {
             width: 100%;
@@ -235,17 +206,11 @@
             color: white;
             font-size: 0.95rem;
             font-weight: 600;
-            margin-bottom: 2px;
         }
 
         .code-text p {
             color: rgba(255,255,255,0.5);
             font-size: 0.7rem;
-        }
-
-        .code-arrow {
-            color: rgba(255,255,255,0.5);
-            font-size: 1.2rem;
         }
 
         /* MODAL */
@@ -260,7 +225,6 @@
             display: none;
             align-items: center;
             justify-content: center;
-            backdrop-filter: blur(10px);
         }
 
         .modal-overlay.show { display: flex; }
@@ -271,7 +235,6 @@
             background: #1a1a2e;
             border-radius: 20px;
             overflow: hidden;
-            border: 1px solid rgba(102,126,234,0.3);
         }
 
         .modal-header {
@@ -283,7 +246,6 @@
         .modal-header h3 {
             color: white;
             font-size: 1.3rem;
-            margin-bottom: 5px;
         }
 
         .modal-body { padding: 25px 20px; }
@@ -294,14 +256,12 @@
             padding: 15px;
             text-align: center;
             margin-bottom: 20px;
-            border: 1px solid rgba(102,126,234,0.3);
         }
 
         .code-display span {
             font-size: 2rem;
             letter-spacing: 8px;
             color: white;
-            font-weight: 600;
             font-family: monospace;
         }
 
@@ -318,16 +278,9 @@
             border-radius: 12px;
             padding: 18px;
             font-size: 1.5rem;
-            font-weight: 600;
             color: white;
             text-align: center;
             cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .numpad-btn:active {
-            background: #667eea;
-            transform: scale(0.95);
         }
 
         .numpad-actions {
@@ -340,10 +293,9 @@
         .action-btn {
             padding: 14px;
             border-radius: 12px;
-            font-size: 1rem;
-            font-weight: 600;
             text-align: center;
             cursor: pointer;
+            font-weight: 600;
         }
 
         .action-btn.clear { background: #dc3545; color: white; }
@@ -356,13 +308,11 @@
             border: none;
             border-radius: 12px;
             color: white;
-            font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
         }
 
-        /* FILM LOADING ANIMATION */
-        .film-loading-overlay {
+        .film-loading {
             position: fixed;
             top: 0;
             left: 0;
@@ -377,52 +327,25 @@
             gap: 20px;
             visibility: hidden;
             opacity: 0;
-            transition: all 0.3s ease;
+            transition: all 0.3s;
         }
 
-        .film-loading-overlay.show {
+        .film-loading.show {
             visibility: visible;
             opacity: 1;
         }
 
         .film-loading-spinner {
-            width: 60px;
-            height: 60px;
-            border: 4px solid rgba(102,126,234,0.3);
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(102,126,234,0.3);
             border-top-color: #667eea;
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
         }
 
-        .film-loading-text {
-            color: white;
-            font-size: 1.2rem;
-            font-weight: 500;
-        }
-
-        .film-loading-dots {
-            display: inline-flex;
-            gap: 3px;
-        }
-
-        .film-loading-dots span {
-            width: 6px;
-            height: 6px;
-            background: white;
-            border-radius: 50%;
-            animation: dotPulse 1.4s infinite;
-        }
-
-        .film-loading-dots span:nth-child(2) { animation-delay: 0.2s; }
-        .film-loading-dots span:nth-child(3) { animation-delay: 0.4s; }
-
         @keyframes spin {
             to { transform: rotate(360deg); }
-        }
-
-        @keyframes dotPulse {
-            0%, 60%, 100% { opacity: 0.3; transform: scale(0.8); }
-            30% { opacity: 1; transform: scale(1.2); }
         }
 
         .logo {
@@ -436,13 +359,7 @@
             border-radius: 30px;
             color: white;
             font-weight: bold;
-            font-size: 1rem;
-        }
-
-        .logo span {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            font-size: 0.9rem;
         }
 
         .admin-btn {
@@ -462,19 +379,6 @@
             text-decoration: none;
             font-size: 1rem;
         }
-
-        .no-shorts {
-            width: 100%;
-            height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            text-align: center;
-            background: linear-gradient(135deg, #0f0c29, #302b63);
-            flex-direction: column;
-            gap: 15px;
-        }
     </style>
 </head>
 <body>
@@ -483,32 +387,23 @@
     <div class="preloader-content">
         <div class="preloader-logo">🎬</div>
         <div class="preloader-title">KINOTOP</div>
-        <div class="preloader-subtitle">Eng yangi va qiziqarli kinolar</div>
-        <button class="start-btn" id="startBtn">🎥 Videoni ko'rishni boshlash</button>
+        <button class="start-btn" id="startBtn">🎥 Boshlash</button>
     </div>
 </div>
 
-<div class="film-loading-overlay" id="filmLoadingOverlay">
+<div class="film-loading" id="filmLoading">
     <div class="film-loading-spinner"></div>
-    <div class="film-loading-text">
-        Kino qidirilmoqda
-        <div class="film-loading-dots">
-            <span>.</span><span>.</span><span>.</span>
-        </div>
-    </div>
+    <div style="color: white;">Kino qidirilmoqda...</div>
 </div>
 
-<div class="logo">
-    <span>🎬 KINOTOP</span>
-</div>
-
+<div class="logo">🎬 KINOTOP</div>
 <a href="/admin" class="admin-btn">🔐</a>
 
 <div class="shorts-container" id="shortsContainer" style="display: none;">
     {% if shorts %}
         {% for short in shorts %}
-        <div class="short-video" data-id="{{ short.id }}" data-index="{{ loop.index0 }}">
-            <video preload="auto" playsinline webkit-playsinline muted loop>
+        <div class="short-video" data-id="{{ short.id }}">
+            <video preload="auto" playsinline muted loop>
                 <source src="/stream-shorts/{{ short.id }}" type="video/mp4">
             </video>
             <div class="short-info">
@@ -522,7 +417,9 @@
         </div>
         {% endfor %}
     {% else %}
-        <div class="no-shorts"><p>📱 Hozircha shorts videolar yo'q</p></div>
+        <div style="color:white; display:flex; align-items:center; justify-content:center; height:100vh;">
+            <p>📱 Hozircha shorts yo'q</p>
+        </div>
     {% endif %}
 </div>
 
@@ -531,8 +428,8 @@
         <div class="code-button-left">
             <div class="code-icon">🎬</div>
             <div class="code-text">
-                <h4>4 xonali film kodini kiriting</h4>
-                <p>To'liq sifatda tomosha qiling</p>
+                <h4>4 xonali kodni kiriting</h4>
+                <p>Filmni tomosha qilish</p>
             </div>
         </div>
         <div class="code-arrow">▲</div>
@@ -540,17 +437,15 @@
 </div>
 
 <div class="modal-overlay" id="modalOverlay">
-    <div class="modal-close" id="closeModalBtn">✕</div>
     <div class="modal-container">
         <div class="modal-header">
-            <h3>🎬 4 xonali film kodini kiriting</h3>
-            <p>Masalan: 1234</p>
+            <h3>🎬 4 xonali kod</h3>
         </div>
         <div class="modal-body">
             <div class="code-display">
                 <span id="codeDisplay">____</span>
             </div>
-            <div class="numpad" id="numpad">
+            <div class="numpad">
                 <div class="numpad-btn" data-value="1">1</div>
                 <div class="numpad-btn" data-value="2">2</div>
                 <div class="numpad-btn" data-value="3">3</div>
@@ -574,7 +469,7 @@
 </div>
 
 <script>
-    // ============ SHORTS PLAYER ============
+    // PRELOADER
     const preloader = document.getElementById('preloader');
     const startBtn = document.getElementById('startBtn');
     const shortsContainer = document.getElementById('shortsContainer');
@@ -583,49 +478,35 @@
     startBtn.addEventListener('click', () => {
         preloader.classList.add('hide');
         shortsContainer.style.display = 'block';
-        
         setTimeout(() => {
-            if (allVideos.length > 0) {
-                prepareFirstVideo();
-                setupVideoLoop();
-            }
+            if (allVideos.length > 0) playVideo(0);
         }, 100);
     });
 
     function getAllVideos() {
-        allVideos = Array.from(document.querySelectorAll('.short-video video'));
+        allVideos = Array.from(document.querySelectorAll('.short-video'));
     }
 
     let currentIndex = 0;
     let currentVideo = null;
 
-    function prepareFirstVideo() {
-        if (allVideos.length > 0) {
-            currentVideo = allVideos[0];
-            currentVideo.muted = false;
-            currentVideo.play().catch(e => console.log());
-            const firstSoundBtn = document.querySelector('.sound-btn');
-            if (firstSoundBtn) firstSoundBtn.innerHTML = '🔊';
-        }
-    }
-
-    function playCurrentVideoOnly() {
-        allVideos.forEach((video) => {
-            const parent = video.closest('.short-video');
-            const soundBtn = parent?.querySelector('.sound-btn');
+    function playVideo(index) {
+        allVideos.forEach((item, i) => {
+            const video = item.querySelector('video');
             video.pause();
             video.muted = true;
-            if (soundBtn) soundBtn.innerHTML = '🔇';
+            if (i === index) {
+                video.muted = false;
+                video.play().catch(e => console.log());
+                currentVideo = video;
+                const soundBtn = item.querySelector('.sound-btn');
+                if (soundBtn) soundBtn.innerHTML = '🔊';
+            } else {
+                const soundBtn = item.querySelector('.sound-btn');
+                if (soundBtn) soundBtn.innerHTML = '🔇';
+            }
         });
-        
-        if (allVideos[currentIndex]) {
-            currentVideo = allVideos[currentIndex];
-            const parent = currentVideo.closest('.short-video');
-            const soundBtn = parent?.querySelector('.sound-btn');
-            currentVideo.muted = false;
-            currentVideo.play().catch(e => console.log());
-            if (soundBtn) soundBtn.innerHTML = '🔊';
-        }
+        currentIndex = index;
     }
 
     function getCurrentIndex() {
@@ -640,65 +521,42 @@
         scrollTimeout = setTimeout(() => {
             const newIndex = getCurrentIndex();
             if (newIndex !== currentIndex && newIndex >= 0 && newIndex < allVideos.length) {
-                currentIndex = newIndex;
-                playCurrentVideoOnly();
+                playVideo(newIndex);
             }
         }, 50);
     });
 
-    function setupVideoLoop() {
-        allVideos.forEach((video, idx) => {
-            video.addEventListener('ended', () => {
-                if (idx === currentIndex) {
-                    video.currentTime = 0;
-                    video.play().catch(e => console.log());
-                }
-            });
-        });
-    }
-
-    function toggleSound(btn, videoId) {
+    function toggleSound(btn) {
         const parent = btn.closest('.short-video');
         const video = parent.querySelector('video');
         if (video) {
-            if (video.muted) {
-                video.muted = false;
-                btn.innerHTML = '🔊';
-            } else {
-                video.muted = true;
-                btn.innerHTML = '🔇';
-            }
+            video.muted = !video.muted;
+            btn.innerHTML = video.muted ? '🔇' : '🔊';
         }
     }
 
     function likeVideo(btn) {
         btn.style.transform = 'scale(1.2)';
-        setTimeout(() => { btn.style.transform = 'scale(1)'; }, 200);
+        setTimeout(() => btn.style.transform = 'scale(1)', 200);
         btn.innerHTML = '❤️';
-        setTimeout(() => { btn.innerHTML = '❤️'; }, 1000);
+        setTimeout(() => btn.innerHTML = '❤️', 1000);
     }
 
-    // ============ 4 XONALI KOD KIRITISH ============
+    // KOD KIRITISH
     let currentCode = '';
     const maxCodeLength = 4;
     const codeDisplay = document.getElementById('codeDisplay');
     const modalOverlay = document.getElementById('modalOverlay');
     const codeBar = document.getElementById('codeBar');
-    const openModalBtn = document.getElementById('openModalBtn');
-    const closeModalBtn = document.getElementById('closeModalBtn');
-    const clearBtn = document.getElementById('clearBtn');
-    const backspaceBtn = document.getElementById('backspaceBtn');
-    const watchSubmitBtn = document.getElementById('watchSubmitBtn');
-    const filmLoadingOverlay = document.getElementById('filmLoadingOverlay');
+    const filmLoading = document.getElementById('filmLoading');
 
     function updateDisplay() {
-        const displayText = currentCode.padEnd(maxCodeLength, '_');
-        codeDisplay.textContent = displayText;
+        codeDisplay.textContent = currentCode.padEnd(maxCodeLength, '_');
     }
 
-    function addDigit(digit) {
+    function addDigit(d) {
         if (currentCode.length < maxCodeLength) {
-            currentCode += digit;
+            currentCode += d;
             updateDisplay();
         }
     }
@@ -708,88 +566,49 @@
 
     function submitCode() {
         if (currentCode.length !== maxCodeLength) {
-            alert(`Iltimos, ${maxCodeLength} xonali kodni kiriting!`);
+            alert('4 xonali kod kiriting!');
             return;
         }
-        
-        const kod = currentCode;
-        filmLoadingOverlay.classList.add('show');
-        
-        fetch(`/api/check/${kod}`)
-            .then(response => {
-                if (response.ok) {
-                    window.location.href = `/film/${kod}`;
-                } else {
-                    filmLoadingOverlay.classList.remove('show');
-                    alert('Bunday kodli film topilmadi!');
+        filmLoading.classList.add('show');
+        fetch(`/api/check/${currentCode}`)
+            .then(res => {
+                if (res.ok) window.location.href = `/film/${currentCode}`;
+                else {
+                    filmLoading.classList.remove('show');
+                    alert('Bunday kod topilmadi!');
                 }
             })
             .catch(() => {
-                filmLoadingOverlay.classList.remove('show');
-                alert('Xatolik yuz berdi!');
+                filmLoading.classList.remove('show');
+                alert('Xatolik!');
             });
     }
 
     document.querySelectorAll('.numpad-btn').forEach(btn => {
-        const value = btn.getAttribute('data-value');
-        if (value && value.trim() !== '') {
-            btn.addEventListener('click', () => addDigit(value));
-        }
+        const val = btn.getAttribute('data-value');
+        if (val && val.trim()) btn.addEventListener('click', () => addDigit(val));
     });
-
-    clearBtn.addEventListener('click', clearCode);
-    backspaceBtn.addEventListener('click', backspace);
-    watchSubmitBtn.addEventListener('click', submitCode);
-
-    openModalBtn.addEventListener('click', () => {
+    document.getElementById('clearBtn').addEventListener('click', clearCode);
+    document.getElementById('backspaceBtn').addEventListener('click', backspace);
+    document.getElementById('watchSubmitBtn').addEventListener('click', submitCode);
+    document.getElementById('openModalBtn').addEventListener('click', () => {
         modalOverlay.classList.add('show');
-        codeBar.classList.add('hidden');
+        codeBar.style.transform = 'translateY(100%)';
     });
-
-    function closeModal() {
+    document.getElementById('closeModalBtn')?.addEventListener('click', () => {
         modalOverlay.classList.remove('show');
-        codeBar.classList.remove('hidden');
+        codeBar.style.transform = 'translateY(0)';
         clearCode();
-    }
-
-    closeModalBtn.addEventListener('click', closeModal);
-    modalOverlay.addEventListener('click', (e) => { if (e.target === modalOverlay) closeModal(); });
-
-    document.addEventListener('keydown', (e) => {
-        if (!modalOverlay.classList.contains('show')) return;
-        if (e.key >= '0' && e.key <= '9') { addDigit(e.key); }
-        else if (e.key === 'Backspace') { backspace(); }
-        else if (e.key === 'Delete') { clearCode(); }
-        else if (e.key === 'Enter') { submitCode(); }
-        else if (e.key === 'Escape') { closeModal(); }
     });
 
-    // ============ SAHIFA YUKLANGANDA ============
     window.addEventListener('load', () => {
         getAllVideos();
-        
-        setTimeout(() => {
-            document.querySelectorAll('.sound-btn').forEach(btn => {
-                const videoId = btn.getAttribute('data-id');
-                btn.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    toggleSound(this, videoId);
-                });
-            });
-            
-            document.querySelectorAll('.like-btn').forEach(btn => {
-                btn.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    likeVideo(this);
-                });
-            });
-        }, 500);
-    });
-
-    document.addEventListener('visibilitychange', () => {
-        if (!document.hidden && currentVideo && currentVideo.paused) {
-            currentVideo.play().catch(e => console.log());
-        }
+        document.querySelectorAll('.sound-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => { e.stopPropagation(); toggleSound(btn); });
+        });
+        document.querySelectorAll('.like-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => { e.stopPropagation(); likeVideo(btn); });
+        });
     });
 </script>
 
