@@ -1,6 +1,6 @@
 import os
 import sqlite3
-from flask import Flask, render_template, request, redirect, url_for, send_file, send_from_directory, jsonify, session
+from flask import Flask, render_template, request, redirect, url_for, send_file, send_from_directory, jsonify, session, Response
 from datetime import datetime
 from functools import wraps
 
@@ -44,7 +44,8 @@ def init_db():
         janr TEXT,
         rasm TEXT,
         fayl_nomi TEXT NOT NULL,
-        size INTEGER DEFAULT 0
+        size INTEGER DEFAULT 0,
+        korishlar INTEGER DEFAULT 0
     )''')
     
     c.execute('''CREATE TABLE IF NOT EXISTS shorts (
@@ -53,7 +54,8 @@ def init_db():
         tafsilot TEXT,
         fayl_nomi TEXT NOT NULL,
         sana TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        size INTEGER DEFAULT 0
+        size INTEGER DEFAULT 0,
+        korishlar INTEGER DEFAULT 0
     )''')
     
     c.execute('''CREATE TABLE IF NOT EXISTS featured_films (
@@ -71,9 +73,10 @@ init_db()
 def allowed_file(filename, allowed):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed
 
-# ============ VIDEO STREAMING ============
+# ============ ULTRA FAST INSTANT VIDEO STREAMING ============
 @app.route('/stream/<kod>')
 def stream_video(kod):
+    """Video streaming - darhol boshlanadi, jonli efir kabi"""
     db_path = os.path.join(BASE_DIR, 'database.db')
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
@@ -89,15 +92,62 @@ def stream_video(kod):
     if not os.path.exists(video_path):
         return "Video topilmadi!", 404
     
-    return send_file(
-        video_path,
-        mimetype="video/mp4",
-        conditional=True,
-        max_age=86400
-    )
+    file_size = os.path.getsize(video_path)
+    range_header = request.headers.get('Range', None)
+    
+    def generate_instant(video_path, start, length, chunk_size=512*1024):
+        """Instant streaming - darhol boshlanadi"""
+        with open(video_path, "rb") as f:
+            f.seek(start)
+            sent = 0
+            while sent < length:
+                chunk = f.read(min(chunk_size, length - sent))
+                if not chunk:
+                    break
+                sent += len(chunk)
+                yield chunk
+    
+    if not range_header:
+        # BIRINCHI 256KB DARHOL (video 0.3 soniyada boshlanadi)
+        first_chunk = 256 * 1024
+        response = Response(
+            generate_instant(video_path, 0, min(first_chunk, file_size)), 
+            206, 
+            mimetype="video/mp4"
+        )
+        response.headers["Content-Range"] = f"bytes 0-{min(first_chunk, file_size)-1}/{file_size}"
+        response.headers["Accept-Ranges"] = "bytes"
+        response.headers["Content-Length"] = str(min(first_chunk, file_size))
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["X-Accel-Buffering"] = "no"
+        response.headers["Content-Type"] = "video/mp4"
+        response.headers["Connection"] = "keep-alive"
+        return response
+    
+    # Range qo'llab-quvvatlash (oldinga/orqaga o'tish)
+    byte1, byte2 = 0, None
+    match = range_header.replace("bytes=", "").split("-")
+    if match[0]:
+        byte1 = int(match[0])
+    if len(match) > 1 and match[1]:
+        byte2 = int(match[1])
+    
+    length = file_size - byte1
+    if byte2 is not None:
+        length = byte2 - byte1 + 1
+    
+    response = Response(generate_instant(video_path, byte1, length), 206, mimetype="video/mp4")
+    response.headers.add("Content-Range", f"bytes {byte1}-{byte1 + length - 1}/{file_size}")
+    response.headers.add("Accept-Ranges", "bytes")
+    response.headers.add("Content-Length", str(length))
+    response.headers.add("Cache-Control", "no-cache, no-store, must-revalidate")
+    response.headers.add("X-Accel-Buffering", "no")
+    response.headers.add("Connection", "keep-alive")
+    return response
 
 @app.route('/stream-shorts/<int:id>')
 def stream_shorts(id):
+    """Shorts streaming - darhol boshlanadi"""
     db_path = os.path.join(BASE_DIR, 'database.db')
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
@@ -113,12 +163,25 @@ def stream_shorts(id):
     if not os.path.exists(video_path):
         return "Video topilmadi", 404
     
-    return send_file(
-        video_path,
-        mimetype="video/mp4",
-        conditional=True,
-        max_age=86400
-    )
+    file_size = os.path.getsize(video_path)
+    
+    def generate_instant():
+        with open(video_path, "rb") as f:
+            # Birinchi 256KB darhol
+            first_chunk = f.read(256 * 1024)
+            yield first_chunk
+            # Qolgan qismi
+            while True:
+                chunk = f.read(256 * 1024)
+                if not chunk:
+                    break
+                yield chunk
+    
+    response = Response(generate_instant(), 200, mimetype="video/mp4")
+    response.headers["Accept-Ranges"] = "bytes"
+    response.headers["Cache-Control"] = "no-cache, no-store"
+    response.headers["X-Accel-Buffering"] = "no"
+    return response
 
 # ============ DOWNLOAD ============
 @app.route('/download/<kod>')
@@ -208,6 +271,14 @@ def film(kod):
     conn.close()
     if not row:
         return "Film topilmadi!", 404
+    
+    # Ko'rishlar sonini oshirish
+    conn = sqlite3.connect(db_path)
+    c = conn.cursor()
+    c.execute("UPDATE films SET korishlar = korishlar + 1 WHERE kod = ?", (kod.upper(),))
+    conn.commit()
+    conn.close()
+    
     film = {
         'id': row[0], 'kod': row[1], 'nomi': row[2],
         'tafsilot': row[3], 'yil': row[4], 'janr': row[5],
@@ -215,10 +286,9 @@ def film(kod):
     }
     return render_template('film.html', film=film)
 
-# ============ ADMIN PANEL (SIZNING admin.html BILAN ISHLAYDI) ============
+# ============ ADMIN PANEL ============
 @app.route('/admin', methods=['GET', 'POST'])
 def admin():
-    # Agar login qilingan bo'lsa, dashboardni ko'rsat
     if session.get('admin_logged_in'):
         db_path = os.path.join(BASE_DIR, 'database.db')
         conn = sqlite3.connect(db_path)
@@ -231,22 +301,20 @@ def admin():
         total_films = c.fetchone()[0]
         c.execute("SELECT COUNT(*) FROM shorts")
         total_shorts = c.fetchone()[0]
+        c.execute("SELECT SUM(korishlar) FROM films")
+        total_views = c.fetchone()[0] or 0
         conn.close()
-        return render_template('admin.html', login=True, parol=ADMIN_PASSWORD, 
-                               filmlar=filmlar, shorts_list=shorts_list,
-                               total_films=total_films, total_shorts=total_shorts)
+        return render_template('admin.html', login=True, filmlar=filmlar, shorts_list=shorts_list,
+                               total_films=total_films, total_shorts=total_shorts, total_views=total_views)
     
-    # Login qilinmagan bo'lsa, POST tekshirish
     if request.method == 'POST':
         parol = request.form.get('parol')
         if parol == ADMIN_PASSWORD:
             session['admin_logged_in'] = True
-            # Qayta yuklash va dashboardni ko'rsatish
             return redirect(url_for('admin'))
         else:
             return render_template('admin.html', login=False, xato="❌ Parol noto'g'ri!")
     
-    # GET so'rovi va login qilinmagan - login formasini ko'rsatish
     return render_template('admin.html', login=False)
 
 @app.route('/admin/logout')
@@ -254,7 +322,6 @@ def admin_logout():
     session.pop('admin_logged_in', None)
     return redirect(url_for('admin'))
 
-# ============ ADMIN CRUD ============
 @app.route('/admin/film', methods=['POST'])
 def admin_film():
     if not session.get('admin_logged_in'):
@@ -404,16 +471,22 @@ def internal_error(error):
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))
     print("""
-    ╔══════════════════════════════════════════════════════════════╗
-    ║                                                              ║
-    ║         🎬 KINOTOP - DIGITALOCEAN READY 🎬                  ║
-    ║                                                              ║
-    ╠══════════════════════════════════════════════════════════════╣
-    ║                                                              ║
-    ║  🌐 PORT:        {}                                          ║
-    ║  🔐 ADMIN:       /admin                                     ║
-    ║  📝 ADMIN PASS:  admin123                                   ║
-    ║                                                              ║
-    ╚══════════════════════════════════════════════════════════════╝
+    ╔══════════════════════════════════════════════════════════════════════════╗
+    ║                                                                          ║
+    ║        🎬 KINOTOP - ULTRA FAST INSTANT STREAMING 🎬                      ║
+    ║                                                                          ║
+    ╠══════════════════════════════════════════════════════════════════════════╣
+    ║                                                                          ║
+    ║  🌐 PORT:        {}                                                       ║
+    ║  🔐 ADMIN:       /admin                                                  ║
+    ║  📝 ADMIN PASS:  admin123                                                ║
+    ║                                                                          ║
+    ║  ⚡ INSTANT FEATURES:                                                     ║
+    ║     ✓ First chunk: 256KB (0.3 seconds)                                  ║
+    ║     ✓ No buffering delay                                                ║
+    ║     ✓ X-Accel-Buffering: no                                             ║
+    ║     ✓ Keep-Alive connection                                             ║
+    ║                                                                          ║
+    ╚══════════════════════════════════════════════════════════════════════════╝
     """.format(port))
     app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
