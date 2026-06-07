@@ -36,7 +36,9 @@ def init_db():
         janr TEXT,
         rasm TEXT,
         fayl_nomi TEXT NOT NULL,
-        size INTEGER DEFAULT 0
+        size INTEGER DEFAULT 0,
+        korishlar INTEGER DEFAULT 0,
+        sana TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )''')
     
     # Shorts jadvali
@@ -46,7 +48,8 @@ def init_db():
         tafsilot TEXT,
         fayl_nomi TEXT NOT NULL,
         sana TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        size INTEGER DEFAULT 0
+        size INTEGER DEFAULT 0,
+        korishlar INTEGER DEFAULT 0
     )''')
     
     # Yangi filmlar (afisha uchun)
@@ -65,7 +68,7 @@ init_db()
 def allowed_file(filename, allowed):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed
 
-# ============ PROGRESSIVE VIDEO STREAMING (Tez boshlanish) ============
+# ============ ULTRA TEZ PROGRESSIVE STREAMING ============
 @app.route('/stream/<kod>')
 def stream_video(kod):
     db_path = os.path.join(BASE_DIR, 'database.db')
@@ -85,20 +88,13 @@ def stream_video(kod):
     file_size = os.path.getsize(video_path)
     range_header = request.headers.get('Range', None)
     
-    def generate_progressive(video_path, start, length):
-        """Progressiv yuklash - darhol boshlanadi"""
+    def generate_ultra_fast(video_path, start, length):
+        """ULTRA TEZ - 128KB chunk bilan, darhol boshlanadi"""
         with open(video_path, "rb") as f:
             f.seek(start)
             sent = 0
-            # Birinchi chunk - 512KB (juda tez)
-            first_chunk_sent = False
+            chunk_size = 128 * 1024  # 128KB - maksimal tezlik
             while sent < length:
-                if not first_chunk_sent:
-                    chunk_size = 512 * 1024  # 512KB birinchi
-                    first_chunk_sent = True
-                else:
-                    chunk_size = 1024 * 1024  # 1MB keyingilar
-                
                 chunk = f.read(min(chunk_size, length - sent))
                 if not chunk:
                     break
@@ -106,18 +102,19 @@ def stream_video(kod):
                 yield chunk
     
     if not range_header:
-        # Birinchi 1MB darhol yuboriladi
-        first_chunk_size = 1024 * 1024
+        # BIRINCHI 256KB DARHOL (0.25MB)
+        first_chunk = 256 * 1024
         response = Response(
-            generate_progressive(video_path, 0, min(first_chunk_size, file_size)), 
+            generate_ultra_fast(video_path, 0, min(first_chunk, file_size)), 
             206, 
             mimetype="video/mp4"
         )
-        response.headers["Content-Range"] = f"bytes 0-{min(first_chunk_size, file_size)-1}/{file_size}"
+        response.headers["Content-Range"] = f"bytes 0-{min(first_chunk, file_size)-1}/{file_size}"
         response.headers["Accept-Ranges"] = "bytes"
-        response.headers["Content-Length"] = str(min(first_chunk_size, file_size))
+        response.headers["Content-Length"] = str(min(first_chunk, file_size))
         response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
         response.headers["Content-Type"] = "video/mp4"
+        response.headers["X-Content-Duration"] = str(file_size)
         return response
     
     # Range qo'llab-quvvatlash (oldinga/orqaga o'tish)
@@ -132,7 +129,7 @@ def stream_video(kod):
     if byte2 is not None:
         length = byte2 - byte1 + 1
     
-    response = Response(generate_progressive(video_path, byte1, length), 206, mimetype="video/mp4")
+    response = Response(generate_ultra_fast(video_path, byte1, length), 206, mimetype="video/mp4")
     response.headers.add("Content-Range", f"bytes {byte1}-{byte1 + length - 1}/{file_size}")
     response.headers.add("Accept-Ranges", "bytes")
     response.headers.add("Content-Length", str(length))
@@ -159,7 +156,7 @@ def stream_shorts(id):
     def generate_fast():
         with open(video_path, "rb") as f:
             while True:
-                chunk = f.read(256 * 1024)  # 256KB chunks
+                chunk = f.read(256 * 1024)  # 256KB
                 if not chunk:
                     break
                 yield chunk
@@ -188,6 +185,14 @@ def download_film(kod):
     if not os.path.exists(video_path):
         return "Video topilmadi!", 404
     
+    # Ko'rishlar sonini oshirish
+    db_path = os.path.join(BASE_DIR, 'database.db')
+    conn = sqlite3.connect(db_path)
+    c = conn.cursor()
+    c.execute("UPDATE films SET korishlar = korishlar + 1 WHERE kod = ?", (kod,))
+    conn.commit()
+    conn.close()
+    
     return send_file(
         video_path,
         as_attachment=True,
@@ -213,6 +218,14 @@ def download_shorts(id):
     if not os.path.exists(video_path):
         return "Video topilmadi!", 404
     
+    # Ko'rishlar sonini oshirish
+    db_path = os.path.join(BASE_DIR, 'database.db')
+    conn = sqlite3.connect(db_path)
+    c = conn.cursor()
+    c.execute("UPDATE shorts SET korishlar = korishlar + 1 WHERE id = ?", (id,))
+    conn.commit()
+    conn.close()
+    
     return send_file(
         video_path,
         as_attachment=True,
@@ -226,11 +239,16 @@ def check_film(kod):
     db_path = os.path.join(BASE_DIR, 'database.db')
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
-    c.execute("SELECT id, nomi FROM films WHERE kod = ?", (kod.upper(),))
+    c.execute("SELECT id, nomi, yil, janr FROM films WHERE kod = ?", (kod.upper(),))
     row = c.fetchone()
     conn.close()
     if row:
-        return jsonify({"exists": True, "nomi": row[1]}), 200
+        return jsonify({
+            "exists": True, 
+            "nomi": row[1],
+            "yil": row[2],
+            "janr": row[3]
+        }), 200
     return jsonify({"exists": False}), 404
 
 # ============ SAHIFALAR ============
@@ -242,8 +260,12 @@ def index():
     c.execute("SELECT * FROM shorts ORDER BY sana DESC")
     rows = c.fetchall()
     shorts = [{'id': r[0], 'sarlavha': r[1], 'tafsilot': r[2], 'fayl_nomi': r[3], 'sana': r[4]} for r in rows]
+    
+    # Eng ko'p ko'rilgan filmlar
+    c.execute("SELECT kod, nomi, rasm FROM films ORDER BY korishlar DESC LIMIT 10")
+    top_films = [{'kod': r[0], 'nomi': r[1], 'rasm': r[2]} for r in c.fetchall()]
     conn.close()
-    return render_template('index.html', shorts=shorts)
+    return render_template('index.html', shorts=shorts, top_films=top_films)
 
 @app.route('/film/<kod>')
 def film(kod):
@@ -255,7 +277,11 @@ def film(kod):
     conn.close()
     if not row:
         return "Film topilmadi!", 404
-    film = {'id': row[0], 'kod': row[1], 'nomi': row[2], 'tafsilot': row[3], 'yil': row[4], 'janr': row[5], 'rasm': row[6], 'fayl_nomi': row[7]}
+    film = {
+        'id': row[0], 'kod': row[1], 'nomi': row[2], 
+        'tafsilot': row[3], 'yil': row[4], 'janr': row[5], 
+        'rasm': row[6], 'fayl_nomi': row[7]
+    }
     return render_template('film.html', film=film)
 
 # ============ ADMIN PANEL ============
@@ -438,23 +464,25 @@ def add_headers(response):
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))
     print(f"""
-    ╔═══════════════════════════════════════════════════════════════╗
-    ║                                                               ║
-    ║              🎬 KINOTOP - PROFESSIONAL VERSION 🎬             ║
-    ║                                                               ║
-    ╠═══════════════════════════════════════════════════════════════╣
-    ║                                                               ║
-    ║  🌐 LOCAL:     http://localhost:{port}                        ║
-    ║  🔐 ADMIN:     http://localhost:{port}/admin                  ║
-    ║  📝 PAROL:     admin123                                        ║
-    ║                                                               ║
-    ║  ⚡ XUSUSIYATLAR:                                              ║
-    ║     ✓ Progressive streaming (darhol boshlanadi)               ║
-    ║     ✓ Har qanday hajmdagi video tez ochiladi                  ║
-    ║     ✓ Shorts (Instagram/TikTok style)                         ║
-    ║     ✓ Admin panel                                             ║
-    ║     ✓ Yuklab olish imkoniyati                                 ║
-    ║                                                               ║
-    ╚═══════════════════════════════════════════════════════════════╝
+    ╔══════════════════════════════════════════════════════════════════════════╗
+    ║                                                                          ║
+    ║              🎬 KINOTOP - ULTRA OPTIMIZED VERSION 🎬                    ║
+    ║                                                                          ║
+    ╠══════════════════════════════════════════════════════════════════════════╣
+    ║                                                                          ║
+    ║  🌐 LOCAL:     http://localhost:{port}                                   ║
+    ║  🔐 ADMIN:     http://localhost:{port}/admin                             ║
+    ║  📝 PAROL:     admin123                                                   ║
+    ║                                                                          ║
+    ║  ⚡ XUSUSIYATLAR:                                                         ║
+    ║     ✓ Ultra fast progressive streaming (128KB chunks)                   ║
+    ║     ✓ First chunk 256KB - starts immediately                            ║
+    ║     ✓ Any size video - no waiting                                       ║
+    ║     ✓ No buffering issues                                               ║
+    ║     ✓ Instagram/TikTok style shorts                                     ║
+    ║     ✓ Download with gallery save                                        ║
+    ║     ✓ PWA ready                                                         ║
+    ║                                                                          ║
+    ╚══════════════════════════════════════════════════════════════════════════╝
     """)
     app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
