@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>{{ film.nomi }} | Kinotop</title>
+    <link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet" />
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background: #000; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
@@ -36,7 +37,7 @@
         
         .container { max-width: 1200px; margin: 0 auto; padding: 70px 15px 30px; }
         .video-wrapper { background: #000; border-radius: 16px; overflow: hidden; position: relative; }
-        video { width: 100%; max-height: 70vh; background: #000; }
+        .video-js { width: 100%; height: auto; aspect-ratio: 16/9; }
         
         .info { background: #1a1a1a; border-radius: 16px; padding: 20px; margin-top: 20px; }
         .info h1 { color: white; font-size: 1.5rem; margin-bottom: 8px; }
@@ -52,13 +53,14 @@
             position: fixed;
             bottom: 20px;
             right: 20px;
-            background: rgba(0,0,0,0.7);
+            background: rgba(0,0,0,0.8);
             padding: 8px 16px;
             border-radius: 20px;
             color: white;
             font-size: 0.7rem;
             z-index: 100;
             display: none;
+            font-family: monospace;
         }
         
         @media (max-width: 768px) {
@@ -79,13 +81,10 @@
     <div class="video-wrapper">
         <video
             id="videoPlayer"
+            class="video-js vjs-big-play-centered"
             controls
-            autoplay
-            muted
-            playsinline
-            preload="metadata"
-            width="100%">
-            <source src="/stream/{{ film.kod }}" type="video/mp4">
+            preload="none"
+            playsinline>
         </video>
     </div>
     
@@ -112,25 +111,77 @@
     </div>
 </div>
 
-<div class="buffer-status" id="bufferStatus">🎬 Yuklanmoqda...</div>
+<div class="buffer-status" id="bufferStatus">⏳ Yuklanmoqda...</div>
+
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<script src="https://vjs.zencdn.net/8.10.0/video.min.js"></script>
 
 <script>
     const video = document.getElementById('videoPlayer');
     const downloadBtn = document.getElementById('downloadBtn');
     const bufferStatus = document.getElementById('bufferStatus');
     
-    // Metadata yuklanganda darhol boshlash
-    video.addEventListener('loadedmetadata', () => {
-        video.play().catch(() => {});
-    });
+    let player;
+    let hls;
     
-    // Kutish holatida
+    // HLS manzili
+    const hlsUrl = `/hls/{{ film.kod }}/index.m3u8`;
+    
+    // Video.js bilan HLS o'ynatish
+    if (Hls.isSupported()) {
+        hls = new Hls({
+            enableWorker: true,
+            lowLatencyMode: true,
+            backBufferLength: 60,
+            maxBufferLength: 30,
+            maxMaxBufferLength: 60,
+            startLevel: -1
+        });
+        
+        hls.loadSource(hlsUrl);
+        hls.attachMedia(video);
+        
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+            bufferStatus.style.display = 'none';
+            video.play().catch(e => console.log('Play blocked'));
+        });
+        
+        hls.on(Hls.Events.BUFFER_APPENDING, () => {
+            bufferStatus.style.display = 'block';
+            bufferStatus.innerHTML = '⏳ Yuklanmoqda...';
+        });
+        
+        hls.on(Hls.Events.BUFFER_APPENDED, () => {
+            setTimeout(() => {
+                if (video.readyState >= 2) {
+                    bufferStatus.style.display = 'none';
+                }
+            }, 500);
+        });
+        
+        hls.on(Hls.Events.ERROR, (event, data) => {
+            console.error('HLS error:', data);
+            if (data.fatal) {
+                hls.destroy();
+            }
+        });
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        // Safari uchun native HLS
+        video.src = hlsUrl;
+        video.addEventListener('loadedmetadata', () => {
+            bufferStatus.style.display = 'none';
+            video.play().catch(e => console.log('Play blocked'));
+        });
+    } else {
+        bufferStatus.innerHTML = '❌ Brauzeringiz HLS ni qo\'llab-quvvatlamaydi';
+    }
+    
+    // Video tugmalari
     video.addEventListener('waiting', () => {
         bufferStatus.style.display = 'block';
-        bufferStatus.innerHTML = '⏳ Yuklanmoqda...';
+        bufferStatus.innerHTML = '⏳ Segment yuklanmoqda...';
     });
     
-    // O'ynash boshlanganda
     video.addEventListener('playing', () => {
         bufferStatus.style.display = 'none';
     });
@@ -162,8 +213,16 @@
             video.currentTime += 10;
         }
         if (e.code === 'KeyF') {
-            video.requestFullscreen();
+            if (video.requestFullscreen) {
+                video.requestFullscreen();
+            }
         }
+    });
+    
+    // Sahifa yuklanganda
+    window.addEventListener('load', () => {
+        bufferStatus.style.display = 'block';
+        bufferStatus.innerHTML = '🎬 Tayyorlanmoqda...';
     });
 </script>
 </body>
