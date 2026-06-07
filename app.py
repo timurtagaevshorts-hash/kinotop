@@ -8,21 +8,24 @@ app = Flask(__name__)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 app.config['UPLOAD_FOLDER_FILMS'] = os.path.join(BASE_DIR, 'static/uploads/films')
 app.config['UPLOAD_FOLDER_SHORTS'] = os.path.join(BASE_DIR, 'static/uploads/shorts')
-app.config['MAX_CONTENT_LENGTH'] = 4 * 1024 * 1024 * 1024
+app.config['MAX_CONTENT_LENGTH'] = 4 * 1024 * 1024 * 1024  # 4GB
 
 ALLOWED_VIDEO = {'mp4', 'avi', 'mkv', 'mov', 'webm', 'm4v'}
 ALLOWED_IMAGE = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
+# Papkalarni yaratish
 os.makedirs(app.config['UPLOAD_FOLDER_FILMS'], exist_ok=True)
 os.makedirs(app.config['UPLOAD_FOLDER_SHORTS'], exist_ok=True)
 os.makedirs(os.path.join(BASE_DIR, 'static/uploads'), exist_ok=True)
 
 ADMIN_PASSWORD = 'admin123'
 
+# ============ DATABASE ============
 def init_db():
     db_path = os.path.join(BASE_DIR, 'database.db')
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
+    
     c.execute('''CREATE TABLE IF NOT EXISTS films (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         kod TEXT UNIQUE NOT NULL,
@@ -34,6 +37,7 @@ def init_db():
         fayl_nomi TEXT NOT NULL,
         size INTEGER DEFAULT 0
     )''')
+    
     c.execute('''CREATE TABLE IF NOT EXISTS shorts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         sarlavha TEXT NOT NULL,
@@ -42,11 +46,13 @@ def init_db():
         sana TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         size INTEGER DEFAULT 0
     )''')
+    
     c.execute('''CREATE TABLE IF NOT EXISTS yangi_filmlar (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         film_id INTEGER,
         afisha_sana TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )''')
+    
     conn.commit()
     conn.close()
     print("✅ Ma'lumotlar bazasi tayyor!")
@@ -56,6 +62,7 @@ init_db()
 def allowed_file(filename, allowed):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed
 
+# ============ VIDEO STREAMING ============
 @app.route('/stream/<kod>')
 def stream_video(kod):
     db_path = os.path.join(BASE_DIR, 'database.db')
@@ -80,6 +87,7 @@ def stream_video(kod):
         max_age=86400
     )
 
+# ============ SHORTS STREAMING ============
 @app.route('/stream-shorts/<int:id>')
 def stream_shorts(id):
     db_path = os.path.join(BASE_DIR, 'database.db')
@@ -104,6 +112,7 @@ def stream_shorts(id):
         max_age=86400
     )
 
+# ============ DOWNLOAD ============
 @app.route('/download/<kod>')
 def download_film(kod):
     db_path = os.path.join(BASE_DIR, 'database.db')
@@ -156,6 +165,7 @@ def download_shorts(id):
         conditional=True
     )
 
+# ============ API ============
 @app.route('/api/check/<kod>')
 def check_film(kod):
     db_path = os.path.join(BASE_DIR, 'database.db')
@@ -168,6 +178,7 @@ def check_film(kod):
         return jsonify({"exists": True, "nomi": row[1]}), 200
     return jsonify({"exists": False}), 404
 
+# ============ SAHIFALAR ============
 @app.route('/')
 def index():
     db_path = os.path.join(BASE_DIR, 'database.db')
@@ -196,6 +207,7 @@ def film(kod):
     }
     return render_template('film.html', film=film)
 
+# ============ ADMIN PANEL ============
 @app.route('/admin', methods=['GET', 'POST'])
 def admin():
     if request.method == 'POST':
@@ -241,7 +253,6 @@ def admin_film():
     yangi_nom = f"{kod}.{ext}"
     video_path = os.path.join(app.config['UPLOAD_FOLDER_FILMS'], yangi_nom)
     fayl.save(video_path)
-    
     file_size = os.path.getsize(video_path)
     
     rasm_nomi = None
@@ -357,6 +368,7 @@ def admin_shorts_delete(id):
     conn.close()
     return redirect(url_for('admin', _method='POST', parol=parol))
 
+# ============ ERROR HANDLERS ============
 @app.errorhandler(404)
 def not_found(error):
     return "<h1>404 - Sahifa topilmadi!</h1><a href='/'>Bosh sahifaga qaytish</a>", 404
@@ -365,7 +377,21 @@ def not_found(error):
 def internal_error(error):
     return "<h1>500 - Server xatosi!</h1><a href='/'>Bosh sahifaga qaytish</a>", 500
 
+# ============ MAIN ============
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))
-    print(f"🚀 Kinotop ishga tushdi! Port: {port}")
+    print(f"""
+    ╔══════════════════════════════════════════════════════════════╗
+    ║                                                              ║
+    ║              🎬 KINOTOP - DIGITALOCEAN 🎬                    ║
+    ║                                                              ║
+    ╠══════════════════════════════════════════════════════════════╣
+    ║                                                              ║
+    ║  🌐 PORT:     {port}                                          ║
+    ║  🔐 ADMIN:    /admin (parol: admin123)                       ║
+    ║                                                              ║
+    ║  🚀 Server ishga tushdi!                                    ║
+    ║                                                              ║
+    ╚══════════════════════════════════════════════════════════════╝
+    """)
     app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
