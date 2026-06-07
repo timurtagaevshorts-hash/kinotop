@@ -13,7 +13,7 @@
             top: 0;
             left: 0;
             right: 0;
-            background: rgba(0,0,0,0.9);
+            background: rgba(0,0,0,0.95);
             padding: 12px 20px;
             z-index: 100;
             display: flex;
@@ -48,6 +48,19 @@
         .description { color: #ccc; line-height: 1.5; margin-top: 15px; padding-top: 15px; border-top: 1px solid #333; }
         .back-btn { display: inline-block; margin-top: 20px; color: #667eea; text-decoration: none; }
         
+        .buffer-status {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.7);
+            padding: 8px 16px;
+            border-radius: 20px;
+            color: white;
+            font-size: 0.7rem;
+            z-index: 100;
+            display: none;
+        }
+        
         @media (max-width: 768px) {
             .container { padding: 60px 12px 20px; }
             .info h1 { font-size: 1.2rem; }
@@ -64,7 +77,7 @@
 
 <div class="container">
     <div class="video-wrapper">
-        <video id="videoPlayer" controls autoplay preload="auto" playsinline>
+        <video id="videoPlayer" controls autoplay preload="auto" playsinline width="100%">
             <source src="/stream/{{ film.kod }}" type="video/mp4">
         </video>
     </div>
@@ -92,15 +105,48 @@
     </div>
 </div>
 
+<div class="buffer-status" id="bufferStatus">🎬 Yuklanmoqda...</div>
+
 <script>
     const video = document.getElementById('videoPlayer');
     const downloadBtn = document.getElementById('downloadBtn');
+    const bufferStatus = document.getElementById('bufferStatus');
     
-    // ULTRA TEZ: Video darhol boshlansin
-    video.load();
+    // Video darhol boshlansin
+    video.preload = 'auto';
+    
+    video.addEventListener('loadstart', () => {
+        bufferStatus.style.display = 'block';
+        bufferStatus.innerHTML = '🎬 Boshlanmoqda...';
+    });
     
     video.addEventListener('canplay', () => {
+        bufferStatus.style.display = 'none';
         video.play().catch(e => console.log('Auto play blocked'));
+    });
+    
+    video.addEventListener('waiting', () => {
+        bufferStatus.style.display = 'block';
+        bufferStatus.innerHTML = '⏳ Yuklanmoqda...';
+    });
+    
+    video.addEventListener('playing', () => {
+        bufferStatus.style.display = 'none';
+    });
+    
+    video.addEventListener('progress', () => {
+        if (video.buffered.length > 0) {
+            const percent = (video.buffered.end(0) / video.duration) * 100;
+            if (percent < 100 && percent > 0) {
+                bufferStatus.style.display = 'block';
+                bufferStatus.innerHTML = `📥 ${Math.round(percent)}% yuklandi`;
+            } else if (percent >= 100) {
+                bufferStatus.innerHTML = '✅ To\'liq yuklandi';
+                setTimeout(() => {
+                    bufferStatus.style.display = 'none';
+                }, 2000);
+            }
+        }
     });
     
     // Yuklab olish
@@ -133,6 +179,13 @@
             video.requestFullscreen();
         }
     });
+    
+    // Video darhol boshlash
+    setTimeout(() => {
+        if (video.paused && video.readyState >= 2) {
+            video.play().catch(e => console.log('Play blocked'));
+        }
+    }, 100);
 </script>
 </body>
 </html>
