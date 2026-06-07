@@ -62,7 +62,7 @@ init_db()
 def allowed_file(filename, allowed):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed
 
-# ============ ULTRA FAST VIDEO STREAMING (1MB chunk + FastStart) ============
+# ============ ULTRA TEZ STREAMING ============
 @app.route('/stream/<kod>')
 def stream_video(kod):
     db_path = os.path.join(BASE_DIR, 'database.db')
@@ -83,7 +83,7 @@ def stream_video(kod):
     range_header = request.headers.get('Range', None)
     
     def generate_chunked(video_path, start, length):
-        """1MB chunk bilan streaming - juda tez"""
+        """1MB chunk bilan streaming - darhol boshlanadi"""
         with open(video_path, "rb") as f:
             f.seek(start)
             sent = 0
@@ -96,8 +96,8 @@ def stream_video(kod):
                 yield chunk
     
     if not range_header:
-        # Birinchi 1MB darhol yuboriladi
-        first_chunk = 1024 * 1024
+        # Birinchi 512KB darhol yuboriladi
+        first_chunk = 512 * 1024
         response = Response(
             generate_chunked(video_path, 0, min(first_chunk, file_size)), 
             206, 
@@ -106,7 +106,7 @@ def stream_video(kod):
         response.headers["Content-Range"] = f"bytes 0-{min(first_chunk, file_size)-1}/{file_size}"
         response.headers["Accept-Ranges"] = "bytes"
         response.headers["Content-Length"] = str(min(first_chunk, file_size))
-        response.headers["Cache-Control"] = "public, max-age=86400"
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
         response.headers["X-Accel-Buffering"] = "no"
         response.headers["Content-Type"] = "video/mp4"
         return response
@@ -127,7 +127,7 @@ def stream_video(kod):
     response.headers.add("Content-Range", f"bytes {byte1}-{byte1 + length - 1}/{file_size}")
     response.headers.add("Accept-Ranges", "bytes")
     response.headers.add("Content-Length", str(length))
-    response.headers.add("Cache-Control", "public, max-age=86400")
+    response.headers.add("Cache-Control", "no-cache, no-store, must-revalidate")
     response.headers.add("X-Accel-Buffering", "no")
     return response
 
@@ -147,8 +147,6 @@ def stream_shorts(id):
     video_path = os.path.join(app.config['UPLOAD_FOLDER_SHORTS'], row[0])
     if not os.path.exists(video_path):
         return "Video topilmadi", 404
-    
-    file_size = os.path.getsize(video_path)
     
     def generate_fast():
         with open(video_path, "rb") as f:
@@ -239,12 +237,8 @@ def index():
     c.execute("SELECT * FROM shorts ORDER BY sana DESC")
     rows = c.fetchall()
     shorts = [{'id': r[0], 'sarlavha': r[1], 'tafsilot': r[2], 'fayl_nomi': r[3], 'sana': r[4]} for r in rows]
-    
-    # Eng ko'p ko'rilgan filmlar
-    c.execute("SELECT kod, nomi, rasm FROM films ORDER BY id DESC LIMIT 10")
-    top_films = [{'kod': r[0], 'nomi': r[1], 'rasm': r[2]} for r in c.fetchall()]
     conn.close()
-    return render_template('index.html', shorts=shorts, top_films=top_films)
+    return render_template('index.html', shorts=shorts)
 
 @app.route('/film/<kod>')
 def film(kod):
@@ -307,20 +301,27 @@ def admin_film():
     
     ext = fayl.filename.rsplit('.', 1)[1].lower()
     yangi_nom = f"{kod}.{ext}"
-    fayl.save(os.path.join(app.config['UPLOAD_FOLDER_FILMS'], yangi_nom))
-    file_size = os.path.getsize(os.path.join(app.config['UPLOAD_FOLDER_FILMS'], yangi_nom))
-    
-    # FFmpeg bilan faststart qilish (agar ffmpeg o'rnatilgan bo'lsa)
     video_path = os.path.join(app.config['UPLOAD_FOLDER_FILMS'], yangi_nom)
-    temp_path = os.path.join(app.config['UPLOAD_FOLDER_FILMS'], f"temp_{yangi_nom}")
+    fayl.save(video_path)
+    
+    # Avtomatik optimallashtirish (FFmpeg faststart)
     try:
         import subprocess
-        subprocess.run(['ffmpeg', '-i', video_path, '-c', 'copy', '-movflags', '+faststart', temp_path], 
-                      capture_output=True, timeout=30)
-        if os.path.exists(temp_path):
+        temp_path = os.path.join(app.config['UPLOAD_FOLDER_FILMS'], f"temp_{yangi_nom}")
+        result = subprocess.run([
+            'ffmpeg', '-i', video_path, 
+            '-c', 'copy', 
+            '-movflags', '+faststart', 
+            temp_path
+        ], capture_output=True, timeout=120)
+        
+        if result.returncode == 0 and os.path.exists(temp_path):
             os.replace(temp_path, video_path)
-    except:
-        pass  # ffmpeg yo'q bo'lsa, hech narsa qilma
+            print(f"✅ Video optimallashtirildi: {yangi_nom}")
+    except Exception as e:
+        print(f"⚠️ Optimallashtirish o'tkazib yuborildi: {e}")
+    
+    file_size = os.path.getsize(video_path)
     
     rasm_nomi = None
     if 'rasm' in request.files:
@@ -341,7 +342,7 @@ def admin_film():
         c.execute("INSERT INTO yangi_filmlar (film_id) VALUES (?)", (film_id,))
         conn.commit()
     except sqlite3.IntegrityError:
-        os.remove(os.path.join(app.config['UPLOAD_FOLDER_FILMS'], yangi_nom))
+        os.remove(video_path)
         return "Bunday kod allaqachon mavjud!", 400
     finally:
         conn.close()
@@ -374,12 +375,16 @@ def admin_shorts():
     fayl.save(video_path)
     file_size = os.path.getsize(video_path)
     
-    # Shorts uchun ham faststart
-    temp_path = os.path.join(app.config['UPLOAD_FOLDER_SHORTS'], f"temp_{yangi_nom}")
+    # Shorts uchun ham optimallashtirish
     try:
         import subprocess
-        subprocess.run(['ffmpeg', '-i', video_path, '-c', 'copy', '-movflags', '+faststart', temp_path], 
-                      capture_output=True, timeout=30)
+        temp_path = os.path.join(app.config['UPLOAD_FOLDER_SHORTS'], f"temp_{yangi_nom}")
+        subprocess.run([
+            'ffmpeg', '-i', video_path, 
+            '-c', 'copy', 
+            '-movflags', '+faststart', 
+            temp_path
+        ], capture_output=True, timeout=60)
         if os.path.exists(temp_path):
             os.replace(temp_path, video_path)
     except:
@@ -470,12 +475,11 @@ if __name__ == '__main__':
     ║  📝 PAROL:     admin123                                                   ║
     ║                                                                          ║
     ║  ⚡ OPTIMIZATIONS:                                                        ║
-    ║     ✓ First chunk: 1MB                                                  ║
+    ║     ✓ First chunk: 512KB (starts immediately)                           ║
     ║     ✓ Chunk size: 1MB                                                   ║
-    ║     ✓ FastStart MP4 (metadata at beginning)                             ║
+    ║     ✓ FastStart MP4 (auto optimization on upload)                       ║
     ║     ✓ X-Accel-Buffering: no                                             ║
-    ║     ✓ Cache-Control: public, max-age=86400                              ║
-    ║     ✓ playsinline for mobile                                            ║
+    ║     ✓ No cache for instant playback                                     ║
     ║                                                                          ║
     ╚══════════════════════════════════════════════════════════════════════════╝
     """.format(port, port))
