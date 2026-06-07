@@ -1,486 +1,165 @@
-import os
-import sqlite3
-from flask import Flask, render_template, request, redirect, url_for, send_file, Response, jsonify
-from datetime import datetime
-
-app = Flask(__name__)
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-app.config['UPLOAD_FOLDER_FILMS'] = os.path.join(BASE_DIR, 'static/uploads/films')
-app.config['UPLOAD_FOLDER_SHORTS'] = os.path.join(BASE_DIR, 'static/uploads/shorts')
-app.config['MAX_CONTENT_LENGTH'] = 4 * 1024 * 1024 * 1024  # 4GB
-
-ALLOWED_VIDEO = {'mp4', 'avi', 'mkv', 'mov', 'webm', 'm4v'}
-ALLOWED_IMAGE = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
-
-# Papkalarni yaratish
-os.makedirs(app.config['UPLOAD_FOLDER_FILMS'], exist_ok=True)
-os.makedirs(app.config['UPLOAD_FOLDER_SHORTS'], exist_ok=True)
-os.makedirs(os.path.join(BASE_DIR, 'static/uploads'), exist_ok=True)
-
-ADMIN_PASSWORD = 'admin123'
-
-# ============ DATABASE ============
-def init_db():
-    db_path = os.path.join(BASE_DIR, 'database.db')
-    conn = sqlite3.connect(db_path)
-    c = conn.cursor()
-    
-    c.execute('''CREATE TABLE IF NOT EXISTS films (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        kod TEXT UNIQUE NOT NULL,
-        nomi TEXT NOT NULL,
-        tafsilot TEXT,
-        yil TEXT,
-        janr TEXT,
-        rasm TEXT,
-        fayl_nomi TEXT NOT NULL,
-        size INTEGER DEFAULT 0
-    )''')
-    
-    c.execute('''CREATE TABLE IF NOT EXISTS shorts (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        sarlavha TEXT NOT NULL,
-        tafsilot TEXT,
-        fayl_nomi TEXT NOT NULL,
-        sana TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        size INTEGER DEFAULT 0
-    )''')
-    
-    c.execute('''CREATE TABLE IF NOT EXISTS yangi_filmlar (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        film_id INTEGER,
-        afisha_sana TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )''')
-    
-    conn.commit()
-    conn.close()
-    print("✅ Ma'lumotlar bazasi tayyor!")
-
-init_db()
-
-def allowed_file(filename, allowed):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed
-
-# ============ ULTRA TEZ STREAMING ============
-@app.route('/stream/<kod>')
-def stream_video(kod):
-    db_path = os.path.join(BASE_DIR, 'database.db')
-    conn = sqlite3.connect(db_path)
-    c = conn.cursor()
-    c.execute("SELECT fayl_nomi FROM films WHERE kod = ?", (kod,))
-    row = c.fetchone()
-    conn.close()
-    
-    if not row:
-        return "Film topilmadi!", 404
-    
-    video_path = os.path.join(app.config['UPLOAD_FOLDER_FILMS'], row[0])
-    if not os.path.exists(video_path):
-        return "Video topilmadi!", 404
-    
-    file_size = os.path.getsize(video_path)
-    range_header = request.headers.get('Range', None)
-    
-    def generate_chunked(video_path, start, length):
-        """1MB chunk bilan streaming - darhol boshlanadi"""
-        with open(video_path, "rb") as f:
-            f.seek(start)
-            sent = 0
-            chunk_size = 1024 * 1024  # 1MB
-            while sent < length:
-                chunk = f.read(min(chunk_size, length - sent))
-                if not chunk:
-                    break
-                sent += len(chunk)
-                yield chunk
-    
-    if not range_header:
-        # Birinchi 512KB darhol yuboriladi
-        first_chunk = 512 * 1024
-        response = Response(
-            generate_chunked(video_path, 0, min(first_chunk, file_size)), 
-            206, 
-            mimetype="video/mp4"
-        )
-        response.headers["Content-Range"] = f"bytes 0-{min(first_chunk, file_size)-1}/{file_size}"
-        response.headers["Accept-Ranges"] = "bytes"
-        response.headers["Content-Length"] = str(min(first_chunk, file_size))
-        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-        response.headers["X-Accel-Buffering"] = "no"
-        response.headers["Content-Type"] = "video/mp4"
-        return response
-    
-    # Range qo'llab-quvvatlash (oldinga/orqaga o'tish)
-    byte1, byte2 = 0, None
-    match = range_header.replace("bytes=", "").split("-")
-    if match[0]:
-        byte1 = int(match[0])
-    if len(match) > 1 and match[1]:
-        byte2 = int(match[1])
-    
-    length = file_size - byte1
-    if byte2 is not None:
-        length = byte2 - byte1 + 1
-    
-    response = Response(generate_chunked(video_path, byte1, length), 206, mimetype="video/mp4")
-    response.headers.add("Content-Range", f"bytes {byte1}-{byte1 + length - 1}/{file_size}")
-    response.headers.add("Accept-Ranges", "bytes")
-    response.headers.add("Content-Length", str(length))
-    response.headers.add("Cache-Control", "no-cache, no-store, must-revalidate")
-    response.headers.add("X-Accel-Buffering", "no")
-    return response
-
-# ============ SHORTS STREAMING ============
-@app.route('/stream-shorts/<int:id>')
-def stream_shorts(id):
-    db_path = os.path.join(BASE_DIR, 'database.db')
-    conn = sqlite3.connect(db_path)
-    c = conn.cursor()
-    c.execute("SELECT fayl_nomi FROM shorts WHERE id = ?", (id,))
-    row = c.fetchone()
-    conn.close()
-    
-    if not row:
-        return "Short topilmadi", 404
-    
-    video_path = os.path.join(app.config['UPLOAD_FOLDER_SHORTS'], row[0])
-    if not os.path.exists(video_path):
-        return "Video topilmadi", 404
-    
-    def generate_fast():
-        with open(video_path, "rb") as f:
-            while True:
-                chunk = f.read(256 * 1024)  # 256KB
-                if not chunk:
-                    break
-                yield chunk
-    
-    response = Response(generate_fast(), 200, mimetype="video/mp4")
-    response.headers["Accept-Ranges"] = "bytes"
-    response.headers["Cache-Control"] = "public, max-age=86400"
-    response.headers["X-Accel-Buffering"] = "no"
-    return response
-
-# ============ DOWNLOAD ============
-@app.route('/download/<kod>')
-def download_film(kod):
-    db_path = os.path.join(BASE_DIR, 'database.db')
-    conn = sqlite3.connect(db_path)
-    c = conn.cursor()
-    c.execute("SELECT fayl_nomi, nomi FROM films WHERE kod = ?", (kod,))
-    row = c.fetchone()
-    conn.close()
-    
-    if not row:
-        return "Film topilmadi!", 404
-    
-    video_path = os.path.join(app.config['UPLOAD_FOLDER_FILMS'], row[0])
-    film_nomi = row[1]
-    
-    if not os.path.exists(video_path):
-        return "Video topilmadi!", 404
-    
-    return send_file(
-        video_path,
-        as_attachment=True,
-        download_name=f"{film_nomi}.mp4",
-        mimetype='video/mp4',
-        conditional=True
-    )
-
-@app.route('/download-shorts/<int:id>')
-def download_shorts(id):
-    db_path = os.path.join(BASE_DIR, 'database.db')
-    conn = sqlite3.connect(db_path)
-    c = conn.cursor()
-    c.execute("SELECT fayl_nomi, sarlavha FROM shorts WHERE id = ?", (id,))
-    row = c.fetchone()
-    conn.close()
-    
-    if not row:
-        return "Short topilmadi!", 404
-    
-    video_path = os.path.join(app.config['UPLOAD_FOLDER_SHORTS'], row[0])
-    sarlavha = row[1]
-    
-    if not os.path.exists(video_path):
-        return "Video topilmadi!", 404
-    
-    return send_file(
-        video_path,
-        as_attachment=True,
-        download_name=f"{sarlavha}.mp4",
-        mimetype='video/mp4',
-        conditional=True
-    )
-
-# ============ API ============
-@app.route('/api/check/<kod>')
-def check_film(kod):
-    db_path = os.path.join(BASE_DIR, 'database.db')
-    conn = sqlite3.connect(db_path)
-    c = conn.cursor()
-    c.execute("SELECT id, nomi FROM films WHERE kod = ?", (kod.upper(),))
-    row = c.fetchone()
-    conn.close()
-    if row:
-        return jsonify({"exists": True, "nomi": row[1]}), 200
-    return jsonify({"exists": False}), 404
-
-# ============ SAHIFALAR ============
-@app.route('/')
-def index():
-    db_path = os.path.join(BASE_DIR, 'database.db')
-    conn = sqlite3.connect(db_path)
-    c = conn.cursor()
-    c.execute("SELECT * FROM shorts ORDER BY sana DESC")
-    rows = c.fetchall()
-    shorts = [{'id': r[0], 'sarlavha': r[1], 'tafsilot': r[2], 'fayl_nomi': r[3], 'sana': r[4]} for r in rows]
-    conn.close()
-    return render_template('index.html', shorts=shorts)
-
-@app.route('/film/<kod>')
-def film(kod):
-    db_path = os.path.join(BASE_DIR, 'database.db')
-    conn = sqlite3.connect(db_path)
-    c = conn.cursor()
-    c.execute("SELECT * FROM films WHERE kod = ?", (kod.upper(),))
-    row = c.fetchone()
-    conn.close()
-    if not row:
-        return "Film topilmadi!", 404
-    film = {
-        'id': row[0], 'kod': row[1], 'nomi': row[2], 
-        'tafsilot': row[3], 'yil': row[4], 'janr': row[5], 
-        'rasm': row[6], 'fayl_nomi': row[7]
-    }
-    return render_template('film.html', film=film)
-
-# ============ ADMIN PANEL ============
-@app.route('/admin', methods=['GET', 'POST'])
-def admin():
-    if request.method == 'POST':
-        parol = request.form.get('parol')
-        if parol != ADMIN_PASSWORD:
-            return render_template('admin.html', login=False, xato="❌ Parol noto'g'ri!")
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>{{ film.nomi }} | Kinotop</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #000; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
         
-        db_path = os.path.join(BASE_DIR, 'database.db')
-        conn = sqlite3.connect(db_path)
-        c = conn.cursor()
-        c.execute("SELECT * FROM films ORDER BY id DESC")
-        filmlar = [{'id': r[0], 'kod': r[1], 'nomi': r[2], 'tafsilot': r[3], 'yil': r[4], 'janr': r[5], 'rasm': r[6], 'fayl_nomi': r[7]} for r in c.fetchall()]
-        c.execute("SELECT * FROM shorts ORDER BY sana DESC")
-        shorts_list = [{'id': r[0], 'sarlavha': r[1], 'tafsilot': r[2], 'fayl_nomi': r[3], 'sana': r[4]} for r in c.fetchall()]
-        conn.close()
-        return render_template('admin.html', login=True, parol=parol, filmlar=filmlar, shorts_list=shorts_list, total_films=len(filmlar), total_shorts=len(shorts_list))
-    
-    return render_template('admin.html', login=False)
-
-@app.route('/admin/film', methods=['POST'])
-def admin_film():
-    parol = request.form.get('parol')
-    if parol != ADMIN_PASSWORD:
-        return "Parol xato!", 403
-    
-    kod = request.form['kod'].strip().upper()
-    nomi = request.form['nomi'].strip()
-    tafsilot = request.form.get('tafsilot', '')
-    yil = request.form.get('yil', '')
-    janr = request.form.get('janr', '')
-    
-    if 'film_fayl' not in request.files:
-        return "Film fayli kerak!", 400
-    
-    fayl = request.files['film_fayl']
-    if fayl.filename == '':
-        return "Fayl tanlanmagan!", 400
-    
-    if not allowed_file(fayl.filename, ALLOWED_VIDEO):
-        return "Video fayl kerak! (mp4, avi, mkv, mov, webm)", 400
-    
-    ext = fayl.filename.rsplit('.', 1)[1].lower()
-    yangi_nom = f"{kod}.{ext}"
-    video_path = os.path.join(app.config['UPLOAD_FOLDER_FILMS'], yangi_nom)
-    fayl.save(video_path)
-    
-    # Avtomatik optimallashtirish (FFmpeg faststart)
-    try:
-        import subprocess
-        temp_path = os.path.join(app.config['UPLOAD_FOLDER_FILMS'], f"temp_{yangi_nom}")
-        result = subprocess.run([
-            'ffmpeg', '-i', video_path, 
-            '-c', 'copy', 
-            '-movflags', '+faststart', 
-            temp_path
-        ], capture_output=True, timeout=120)
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0,0,0,0.95);
+            padding: 12px 20px;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .header a { color: white; text-decoration: none; font-size: 1.2rem; font-weight: bold; }
+        .download-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+            padding: 8px 20px;
+            border-radius: 30px;
+            color: white;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
         
-        if result.returncode == 0 and os.path.exists(temp_path):
-            os.replace(temp_path, video_path)
-            print(f"✅ Video optimallashtirildi: {yangi_nom}")
-    except Exception as e:
-        print(f"⚠️ Optimallashtirish o'tkazib yuborildi: {e}")
-    
-    file_size = os.path.getsize(video_path)
-    
-    rasm_nomi = None
-    if 'rasm' in request.files:
-        rasm = request.files['rasm']
-        if rasm and rasm.filename and allowed_file(rasm.filename, ALLOWED_IMAGE):
-            rasm_ext = rasm.filename.rsplit('.', 1)[1].lower()
-            rasm_nomi = f"{kod}.{rasm_ext}"
-            rasm.save(os.path.join(BASE_DIR, 'static/uploads', rasm_nomi))
-    
-    db_path = os.path.join(BASE_DIR, 'database.db')
-    conn = sqlite3.connect(db_path)
-    c = conn.cursor()
-    
-    try:
-        c.execute("INSERT INTO films (kod, nomi, tafsilot, yil, janr, rasm, fayl_nomi, size) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                  (kod, nomi, tafsilot, yil, janr, rasm_nomi, yangi_nom, file_size))
-        film_id = c.lastrowid
-        c.execute("INSERT INTO yangi_filmlar (film_id) VALUES (?)", (film_id,))
-        conn.commit()
-    except sqlite3.IntegrityError:
-        os.remove(video_path)
-        return "Bunday kod allaqachon mavjud!", 400
-    finally:
-        conn.close()
-    
-    return redirect(url_for('admin', _method='POST', parol=parol))
+        .container { max-width: 1200px; margin: 0 auto; padding: 70px 15px 30px; }
+        .video-wrapper { background: #000; border-radius: 16px; overflow: hidden; position: relative; }
+        video { width: 100%; max-height: 70vh; background: #000; }
+        
+        .info { background: #1a1a1a; border-radius: 16px; padding: 20px; margin-top: 20px; }
+        .info h1 { color: white; font-size: 1.5rem; margin-bottom: 8px; }
+        .film-code { display: inline-block; background: linear-gradient(135deg, #667eea, #764ba2); padding: 4px 12px; border-radius: 20px; color: white; font-size: 0.8rem; margin-bottom: 15px; }
+        .details { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 15px; }
+        .detail { background: #2a2a2a; padding: 10px 15px; border-radius: 12px; }
+        .detail-label { color: #aaa; font-size: 0.7rem; text-transform: uppercase; }
+        .detail-value { color: white; font-size: 0.9rem; margin-top: 3px; }
+        .description { color: #ccc; line-height: 1.5; margin-top: 15px; padding-top: 15px; border-top: 1px solid #333; }
+        .back-btn { display: inline-block; margin-top: 20px; color: #667eea; text-decoration: none; }
+        
+        .buffer-status {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.7);
+            padding: 8px 16px;
+            border-radius: 20px;
+            color: white;
+            font-size: 0.7rem;
+            z-index: 100;
+            display: none;
+        }
+        
+        @media (max-width: 768px) {
+            .container { padding: 60px 12px 20px; }
+            .info h1 { font-size: 1.2rem; }
+            .header { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
 
-@app.route('/admin/shorts', methods=['POST'])
-def admin_shorts():
-    parol = request.form.get('parol')
-    if parol != ADMIN_PASSWORD:
-        return "Parol xato!", 403
-    
-    sarlavha = request.form['sarlavha'].strip()
-    tafsilot = request.form.get('tafsilot', '')
-    
-    if 'short_fayl' not in request.files:
-        return "Video fayl kerak!", 400
-    
-    fayl = request.files['short_fayl']
-    if fayl.filename == '':
-        return "Fayl tanlanmagan!", 400
-    
-    if not allowed_file(fayl.filename, ALLOWED_VIDEO):
-        return "Video fayl kerak!", 400
-    
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    ext = fayl.filename.rsplit('.', 1)[1].lower()
-    yangi_nom = f"short_{timestamp}.{ext}"
-    video_path = os.path.join(app.config['UPLOAD_FOLDER_SHORTS'], yangi_nom)
-    fayl.save(video_path)
-    file_size = os.path.getsize(video_path)
-    
-    # Shorts uchun ham optimallashtirish
-    try:
-        import subprocess
-        temp_path = os.path.join(app.config['UPLOAD_FOLDER_SHORTS'], f"temp_{yangi_nom}")
-        subprocess.run([
-            'ffmpeg', '-i', video_path, 
-            '-c', 'copy', 
-            '-movflags', '+faststart', 
-            temp_path
-        ], capture_output=True, timeout=60)
-        if os.path.exists(temp_path):
-            os.replace(temp_path, video_path)
-    except:
-        pass
-    
-    db_path = os.path.join(BASE_DIR, 'database.db')
-    conn = sqlite3.connect(db_path)
-    c = conn.cursor()
-    c.execute("INSERT INTO shorts (sarlavha, tafsilot, fayl_nomi, size) VALUES (?, ?, ?, ?)",
-              (sarlavha, tafsilot, yangi_nom, file_size))
-    conn.commit()
-    conn.close()
-    
-    return redirect(url_for('admin', _method='POST', parol=parol))
+<div class="header">
+    <a href="/">🎬 KINOTOP</a>
+    <button class="download-btn" id="downloadBtn">📥 Yuklab olish</button>
+</div>
 
-@app.route('/admin/film/delete/<int:id>', methods=['POST'])
-def admin_film_delete(id):
-    parol = request.form.get('parol')
-    if parol != ADMIN_PASSWORD:
-        return "Parol xato!", 403
+<div class="container">
+    <div class="video-wrapper">
+        <video
+            id="videoPlayer"
+            controls
+            autoplay
+            muted
+            playsinline
+            preload="metadata"
+            width="100%">
+            <source src="/stream/{{ film.kod }}" type="video/mp4">
+        </video>
+    </div>
     
-    db_path = os.path.join(BASE_DIR, 'database.db')
-    conn = sqlite3.connect(db_path)
-    c = conn.cursor()
-    c.execute("SELECT fayl_nomi, rasm FROM films WHERE id = ?", (id,))
-    row = c.fetchone()
-    
-    if row:
-        fayl_nomi, rasm = row
-        fayl_path = os.path.join(app.config['UPLOAD_FOLDER_FILMS'], fayl_nomi)
-        if os.path.exists(fayl_path):
-            os.remove(fayl_path)
-        if rasm:
-            rasm_path = os.path.join(BASE_DIR, 'static/uploads', rasm)
-            if os.path.exists(rasm_path):
-                os.remove(rasm_path)
-        c.execute("DELETE FROM yangi_filmlar WHERE film_id = ?", (id,))
-        c.execute("DELETE FROM films WHERE id = ?", (id,))
-        conn.commit()
-    
-    conn.close()
-    return redirect(url_for('admin', _method='POST', parol=parol))
+    <div class="info">
+        <h1>{{ film.nomi }}</h1>
+        <div class="film-code">🔑 {{ film.kod }}</div>
+        
+        <div class="details">
+            <div class="detail">
+                <div class="detail-label">Yil</div>
+                <div class="detail-value">{{ film.yil if film.yil else "Noma'lum" }}</div>
+            </div>
+            <div class="detail">
+                <div class="detail-label">Janr</div>
+                <div class="detail-value">{{ film.janr if film.janr else "Noma'lum" }}</div>
+            </div>
+        </div>
+        
+        <div class="description">
+            {{ film.tafsilot if film.tafsilot else "Ma'lumot yo'q" }}
+        </div>
+        
+        <a href="/" class="back-btn">← Bosh sahifa</a>
+    </div>
+</div>
 
-@app.route('/admin/shorts/delete/<int:id>', methods=['POST'])
-def admin_shorts_delete(id):
-    parol = request.form.get('parol')
-    if parol != ADMIN_PASSWORD:
-        return "Parol xato!", 403
-    
-    db_path = os.path.join(BASE_DIR, 'database.db')
-    conn = sqlite3.connect(db_path)
-    c = conn.cursor()
-    c.execute("SELECT fayl_nomi FROM shorts WHERE id = ?", (id,))
-    row = c.fetchone()
-    
-    if row:
-        fayl_nomi = row[0]
-        fayl_path = os.path.join(app.config['UPLOAD_FOLDER_SHORTS'], fayl_nomi)
-        if os.path.exists(fayl_path):
-            os.remove(fayl_path)
-        c.execute("DELETE FROM shorts WHERE id = ?", (id,))
-        conn.commit()
-    
-    conn.close()
-    return redirect(url_for('admin', _method='POST', parol=parol))
+<div class="buffer-status" id="bufferStatus">🎬 Yuklanmoqda...</div>
 
-# ============ ERROR HANDLERS ============
-@app.errorhandler(404)
-def not_found(error):
-    return "<h1>404 - Sahifa topilmadi!</h1><a href='/'>Bosh sahifaga qaytish</a>", 404
-
-@app.errorhandler(500)
-def internal_error(error):
-    return "<h1>500 - Server xatosi!</h1><a href='/'>Bosh sahifaga qaytish</a>", 500
-
-# ============ MAIN ============
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 8080))
-    print("""
-    ╔══════════════════════════════════════════════════════════════════════════╗
-    ║                                                                          ║
-    ║              🎬 KINOTOP - ULTRA FAST STREAMING 🎬                        ║
-    ║                                                                          ║
-    ╠══════════════════════════════════════════════════════════════════════════╣
-    ║                                                                          ║
-    ║  🌐 LOCAL:     http://localhost:{}                                       ║
-    ║  🔐 ADMIN:     http://localhost:{}/admin                                 ║
-    ║  📝 PAROL:     admin123                                                   ║
-    ║                                                                          ║
-    ║  ⚡ OPTIMIZATIONS:                                                        ║
-    ║     ✓ First chunk: 512KB (starts immediately)                           ║
-    ║     ✓ Chunk size: 1MB                                                   ║
-    ║     ✓ FastStart MP4 (auto optimization on upload)                       ║
-    ║     ✓ X-Accel-Buffering: no                                             ║
-    ║     ✓ No cache for instant playback                                     ║
-    ║                                                                          ║
-    ╚══════════════════════════════════════════════════════════════════════════╝
-    """.format(port, port))
-    app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
+<script>
+    const video = document.getElementById('videoPlayer');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const bufferStatus = document.getElementById('bufferStatus');
+    
+    video.addEventListener('loadedmetadata', () => {
+        video.play().catch(() => {});
+    });
+    
+    video.addEventListener('waiting', () => {
+        bufferStatus.style.display = 'block';
+        bufferStatus.innerHTML = '⏳ Yuklanmoqda...';
+    });
+    
+    video.addEventListener('playing', () => {
+        bufferStatus.style.display = 'none';
+    });
+    
+    downloadBtn.addEventListener('click', () => {
+        const link = document.createElement('a');
+        link.href = `/download/{{ film.kod }}`;
+        link.download = '{{ film.nomi }}.mp4';
+        link.click();
+        
+        const originalText = downloadBtn.innerHTML;
+        downloadBtn.innerHTML = '📥 Yuklanmoqda...';
+        setTimeout(() => {
+            downloadBtn.innerHTML = originalText;
+        }, 2000);
+    });
+    
+    document.addEventListener('keydown', (e) => {
+        if (e.code === 'Space') {
+            e.preventDefault();
+            video.paused ? video.play() : video.pause();
+        }
+        if (e.code === 'ArrowLeft') {
+            video.currentTime -= 10;
+        }
+        if (e.code === 'ArrowRight') {
+            video.currentTime += 10;
+        }
+        if (e.code === 'KeyF') {
+            video.requestFullscreen();
+        }
+    });
+</script>
+</body>
+</html>
