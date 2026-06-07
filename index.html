@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Kinotop | Premium kinolar</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: #000;
+            overflow: hidden;
+            height: 100vh;
+            width: 100%;
+            position: fixed;
+        }
+
+        /* SHORTS CONTAINER */
+        .shorts-container {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            overflow-y: scroll;
+            scroll-snap-type: y mandatory;
+            scroll-behavior: smooth;
+            background: #000;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .shorts-container::-webkit-scrollbar {
+            display: none;
+        }
+
+        .short-video {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            scroll-snap-align: start;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .short-video video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            background: #000;
+        }
+
+        .short-info {
+            position: absolute;
+            bottom: 100px;
+            left: 16px;
+            right: 16px;
+            z-index: 10;
+            background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%);
+            padding: 20px 15px;
+            border-radius: 15px;
+        }
+
+        .short-title {
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+        }
+
+        .short-desc {
+            color: rgba(255,255,255,0.8);
+            font-size: 0.8rem;
+            text-shadow: 0 1px 1px rgba(0,0,0,0.5);
+        }
+
+        .short-loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            z-index: 15;
+            display: none;
+        }
+
+        @keyframes spin {
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        /* ============ CODE INPUT BUTTON (TUGMA) ============ */
+        .code-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-top: 2px solid #667eea;
+            z-index: 100;
+            transform: translateY(0);
+            transition: transform 0.3s ease;
+        }
+
+        .code-bar.hidden {
+            transform: translateY(100%);
+        }
+
+        .code-button {
+            width: 100%;
+            padding: 16px 20px;
+            background: transparent;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+        }
+
+        .code-button-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .code-icon {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+        }
+
+        .code-text {
+            text-align: left;
+        }
+
+        .code-text h4 {
+            color: white;
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .code-text p {
+            color: rgba(255,255,255,0.5);
+            font-size: 0.7rem;
+        }
+
+        .code-arrow {
+            color: rgba(255,255,255,0.5);
+            font-size: 1.2rem;
+        }
+
+        /* ============ MODAL OVERLAY (KOD KIRITISH OYNASI) ============ */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.95);
+            z-index: 200;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal-container {
+            width: 90%;
+            max-width: 400px;
+            background: #1a1a2e;
+            border-radius: 20px;
+            overflow: hidden;
+            border: 1px solid rgba(102,126,234,0.3);
+        }
+
+        .modal-header {
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            text-align: center;
+        }
+
+        .modal-header h3 {
+            color: white;
+            font-size: 1.3rem;
+            margin-bottom: 5px;
+        }
+
+        .modal-header p {
+            color: rgba(255,255,255,0.8);
+            font-size: 0.8rem;
+        }
+
+        .modal-body {
+            padding: 25px 20px;
+        }
+
+        .code-display {
+            background: #0f0f1a;
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+            margin-bottom: 20px;
+            border: 1px solid rgba(102,126,234,0.3);
+        }
+
+        .code-display span {
+            font-size: 1.8rem;
+            letter-spacing: 4px;
+            color: white;
+            font-weight: 600;
+            font-family: monospace;
+        }
+
+        /* Raqamli klaviatura */
+        .numpad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .numpad-btn {
+            background: #0f0f1a;
+            border: 1px solid rgba(102,126,234,0.3);
+            border-radius: 12px;
+            padding: 18px;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: white;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .numpad-btn:active {
+            background: #667eea;
+            transform: scale(0.95);
+        }
+
+        .numpad-btn.wide {
+            grid-column: span 1;
+        }
+
+        .numpad-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        .action-btn {
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .action-btn.clear {
+            background: #dc3545;
+            color: white;
+            border: none;
+        }
+
+        .action-btn.clear:active {
+            background: #c82333;
+            transform: scale(0.95);
+        }
+
+        .action-btn.backspace {
+            background: #ffc107;
+            color: #333;
+            border: none;
+        }
+
+        .action-btn.backspace:active {
+            background: #e0a800;
+            transform: scale(0.95);
+        }
+
+        .watch-submit {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .watch-submit:active {
+            transform: scale(0.98);
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.2);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            z-index: 210;
+        }
+
+        /* Logo */
+        .logo {
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            z-index: 50;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(10px);
+            padding: 6px 16px;
+            border-radius: 30px;
+            color: white;
+            font-weight: bold;
+            font-size: 1rem;
+            letter-spacing: 1px;
+        }
+
+        .logo span {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .admin-btn {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            z-index: 50;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(10px);
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-decoration: none;
+            font-size: 1rem;
+        }
+
+        .no-shorts {
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-align: center;
+            background: linear-gradient(135deg, #0f0c29, #302b63);
+            flex-direction: column;
+            gap: 15px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="logo">
+    <span>🎬 KINOTOP</span>
+</div>
+
+<a href="/admin" class="admin-btn">🔐</a>
+
+<!-- SHORTS CONTAINER -->
+<div class="shorts-container" id="shortsContainer">
+    {% if shorts %}
+        {% for short in shorts %}
+        <div class="short-video" data-id="{{ short.id }}" data-index="{{ loop.index0 }}">
+            <video preload="auto" playsinline webkit-playsinline muted>
+                <source src="/stream-shorts/{{ short.id }}" type="video/mp4">
+            </video>
+            <div class="short-loading" id="loading-{{ short.id }}"></div>
+            <div class="short-info">
+                <div class="short-title">{{ short.sarlavha }}</div>
+                <div class="short-desc">{{ short.tafsilot or 'Qiziqarli video' }}</div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="no-shorts">
+            <p>📱 Hozircha shorts videolar yo'q</p>
+            <p style="font-size: 0.8rem;">Admin panel orqali video qo'shing</p>
+        </div>
+    {% endif %}
+</div>
+
+<!-- CODE INPUT BAR (TUGMA) -->
+<div class="code-bar" id="codeBar">
+    <button class="code-button" id="openModalBtn">
+        <div class="code-button-left">
+            <div class="code-icon">🎬</div>
+            <div class="code-text">
+                <h4>Film kodini kiriting</h4>
+                <p>To'liq sifatda tomosha qiling</p>
+            </div>
+        </div>
+        <div class="code-arrow">▲</div>
+    </button>
+</div>
+
+<!-- MODAL OVERLAY (KOD KIRITISH OYNASI) -->
+<div class="modal-overlay" id="modalOverlay">
+    <div class="modal-close" id="closeModalBtn">✕</div>
+    <div class="modal-container">
+        <div class="modal-header">
+            <h3>🎬 Film kodini kiriting</h3>
+            <p>Kodni raqamlar orqali yozing</p>
+        </div>
+        <div class="modal-body">
+            <div class="code-display">
+                <span id="codeDisplay">______</span>
+            </div>
+            
+            <div class="numpad" id="numpad">
+                <div class="numpad-btn" data-value="1">1</div>
+                <div class="numpad-btn" data-value="2">2</div>
+                <div class="numpad-btn" data-value="3">3</div>
+                <div class="numpad-btn" data-value="4">4</div>
+                <div class="numpad-btn" data-value="5">5</div>
+                <div class="numpad-btn" data-value="6">6</div>
+                <div class="numpad-btn" data-value="7">7</div>
+                <div class="numpad-btn" data-value="8">8</div>
+                <div class="numpad-btn" data-value="9">9</div>
+                <div class="numpad-btn" data-value=""> </div>
+                <div class="numpad-btn" data-value="0">0</div>
+                <div class="numpad-btn" data-value=""> </div>
+            </div>
+            
+            <div class="numpad-actions">
+                <div class="action-btn clear" id="clearBtn">O'chirish</div>
+                <div class="action-btn backspace" id="backspaceBtn">⌫ O'chir</div>
+            </div>
+            
+            <button class="watch-submit" id="watchSubmitBtn">🎬 Tomosha qilish</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ============ SHORTS VIDEO PLAYER ============
+    const shortsContainer = document.getElementById('shortsContainer');
+    const allVideos = document.querySelectorAll('.short-video');
+    let currentIndex = 0;
+    let currentVideo = null;
+    let preloadedVideos = new Set();
+
+    function preloadAllVideos() {
+        allVideos.forEach((item, idx) => {
+            const video = item.querySelector('video');
+            if (video && !preloadedVideos.has(idx)) {
+                video.load();
+                preloadedVideos.add(idx);
+            }
+        });
+    }
+
+    function playCurrentVideoOnly() {
+        allVideos.forEach((item) => {
+            const video = item.querySelector('video');
+            if (video) {
+                video.pause();
+                video.muted = true;
+            }
+        });
+        
+        const currentItem = allVideos[currentIndex];
+        if (currentItem) {
+            currentVideo = currentItem.querySelector('video');
+            const loadingDiv = currentItem.querySelector('.short-loading');
+            
+            if (currentVideo) {
+                if (loadingDiv) loadingDiv.style.display = 'block';
+                
+                const playHandler = () => {
+                    if (loadingDiv) loadingDiv.style.display = 'none';
+                    currentVideo.muted = false;
+                    currentVideo.play().catch(e => console.log('Play error:', e));
+                    currentVideo.removeEventListener('canplay', playHandler);
+                };
+                
+                currentVideo.addEventListener('canplay', playHandler);
+                currentVideo.load();
+                
+                setTimeout(() => {
+                    if (loadingDiv) loadingDiv.style.display = 'none';
+                    if (currentVideo.readyState >= 2) {
+                        currentVideo.muted = false;
+                        currentVideo.play().catch(e => console.log('Auto play error'));
+                    }
+                }, 500);
+            }
+        }
+    }
+
+    function getCurrentIndex() {
+        const scrollTop = shortsContainer.scrollTop;
+        const itemHeight = window.innerHeight;
+        return Math.round(scrollTop / itemHeight);
+    }
+
+    let scrollTimeout;
+    shortsContainer.addEventListener('scroll', () => {
+        if (scrollTimeout) clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(() => {
+            const newIndex = getCurrentIndex();
+            if (newIndex !== currentIndex && newIndex >= 0 && newIndex < allVideos.length) {
+                currentIndex = newIndex;
+                playCurrentVideoOnly();
+            }
+        }, 50);
+    });
+
+    window.addEventListener('load', () => {
+        preloadAllVideos();
+        setTimeout(() => {
+            currentIndex = 0;
+            playCurrentVideoOnly();
+        }, 300);
+    });
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            if (currentVideo) currentVideo.pause();
+        } else {
+            if (currentVideo && currentVideo.paused) {
+                playCurrentVideoOnly();
+            }
+        }
+    });
+
+    // ============ KOD KIRITISH FUNKSIYALARI ============
+    let currentCode = '';
+    const maxCodeLength = 6;
+    const codeDisplay = document.getElementById('codeDisplay');
+    const modalOverlay = document.getElementById('modalOverlay');
+    const codeBar = document.getElementById('codeBar');
+    const openModalBtn = document.getElementById('openModalBtn');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const backspaceBtn = document.getElementById('backspaceBtn');
+    const watchSubmitBtn = document.getElementById('watchSubmitBtn');
+
+    function updateDisplay() {
+        const displayText = currentCode.padEnd(maxCodeLength, '_');
+        codeDisplay.textContent = displayText;
+    }
+
+    function addDigit(digit) {
+        if (currentCode.length < maxCodeLength) {
+            currentCode += digit;
+            updateDisplay();
+        }
+    }
+
+    function clearCode() {
+        currentCode = '';
+        updateDisplay();
+    }
+
+    function backspace() {
+        currentCode = currentCode.slice(0, -1);
+        updateDisplay();
+    }
+
+    function submitCode() {
+        if (currentCode.length === 0) {
+            alert('Iltimos, film kodini kiriting!');
+            return;
+        }
+        const kod = currentCode.toUpperCase();
+        window.location.href = `/film/${kod}`;
+    }
+
+    // Numpad eventlari
+    document.querySelectorAll('.numpad-btn').forEach(btn => {
+        const value = btn.getAttribute('data-value');
+        if (value && value.trim() !== '') {
+            btn.addEventListener('click', () => addDigit(value));
+        }
+    });
+
+    clearBtn.addEventListener('click', clearCode);
+    backspaceBtn.addEventListener('click', backspace);
+    watchSubmitBtn.addEventListener('click', submitCode);
+
+    // Modal ochish/yopish
+    openModalBtn.addEventListener('click', () => {
+        modalOverlay.classList.add('show');
+        codeBar.classList.add('hidden');
+    });
+
+    function closeModal() {
+        modalOverlay.classList.remove('show');
+        codeBar.classList.remove('hidden');
+        clearCode();
+    }
+
+    closeModalBtn.addEventListener('click', closeModal);
+    
+    modalOverlay.addEventListener('click', (e) => {
+        if (e.target === modalOverlay) {
+            closeModal();
+        }
+    });
+
+    // Klaviatura qo'llab-quvvatlash
+    document.addEventListener('keydown', (e) => {
+        if (!modalOverlay.classList.contains('show')) return;
+        
+        if (e.key >= '0' && e.key <= '9') {
+            addDigit(e.key);
+        } else if (e.key === 'Backspace') {
+            backspace();
+        } else if (e.key === 'Delete') {
+            clearCode();
+        } else if (e.key === 'Enter') {
+            submitCode();
+        } else if (e.key === 'Escape') {
+            closeModal();
+        }
+    });
+
+    // Video tugaganda keyingisiga o'tish
+    function setupVideoEnded() {
+        allVideos.forEach((item, idx) => {
+            const video = item.querySelector('video');
+            if (video) {
+                video.addEventListener('ended', () => {
+                    if (idx === currentIndex && idx + 1 < allVideos.length) {
+                        const nextElement = allVideos[idx + 1];
+                        nextElement.scrollIntoView({ behavior: 'smooth' });
+                        setTimeout(() => {
+                            currentIndex = idx + 1;
+                            playCurrentVideoOnly();
+                        }, 300);
+                    }
+                });
+            }
+        });
+    }
+    
+    setTimeout(setupVideoEnded, 500);
+</script>
+
+</body>
+</html>

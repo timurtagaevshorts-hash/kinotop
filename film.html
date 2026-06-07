@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ film.nomi }} | Kinotop</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .navbar {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            padding: 15px 30px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+        }
+        
+        .navbar a {
+            color: white;
+            text-decoration: none;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 80px 20px 40px;
+        }
+        
+        .video-wrapper {
+            background: #000;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+        
+        video {
+            width: 100%;
+            max-height: 70vh;
+            background: #000;
+        }
+        
+        .film-info {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 25px;
+            margin-top: 20px;
+        }
+        
+        .film-info h1 {
+            color: white;
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+        }
+        
+        .film-code {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            padding: 5px 15px;
+            border-radius: 20px;
+            color: white;
+            font-size: 0.85rem;
+            margin-bottom: 15px;
+        }
+        
+        .film-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .detail-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+            padding: 12px;
+        }
+        
+        .detail-label {
+            color: rgba(255,255,255,0.6);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+        }
+        
+        .detail-value {
+            color: white;
+            font-size: 1rem;
+            margin-top: 5px;
+        }
+        
+        .film-description {
+            color: rgba(255,255,255,0.8);
+            line-height: 1.6;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .btn-back {
+            display: inline-block;
+            margin-top: 20px;
+            color: #667eea;
+            text-decoration: none;
+        }
+        
+        .loading-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: rgba(102,126,234,0.3);
+            z-index: 1001;
+        }
+        
+        .loading-progress {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transition: width 0.3s;
+        }
+        
+        @media (max-width: 768px) {
+            .main-container {
+                padding: 70px 15px 30px;
+            }
+            .film-info h1 {
+                font-size: 1.4rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<nav class="navbar">
+    <a href="/">🎬 KINOTOP</a>
+</nav>
+
+<div class="loading-bar">
+    <div class="loading-progress" id="progressBar"></div>
+</div>
+
+<div class="main-container">
+    <div class="video-wrapper">
+        <video id="videoPlayer" controls autoplay preload="auto" playsinline>
+            <source src="/stream/{{ film.kod }}" type="video/mp4">
+            Brauzeringiz video formatini qo'llab-quvvatlamaydi.
+        </video>
+    </div>
+    
+    <div class="film-info">
+        <h1>{{ film.nomi }}</h1>
+        <div class="film-code">🔑 Kod: {{ film.kod }}</div>
+        
+        <div class="film-details">
+            <div class="detail-card">
+                <div class="detail-label">Yil</div>
+                <div class="detail-value">{{ film.yil if film.yil else "Noma'lum" }}</div>
+            </div>
+            <div class="detail-card">
+                <div class="detail-label">Janr</div>
+                <div class="detail-value">{{ film.janr if film.janr else "Noma'lum" }}</div>
+            </div>
+        </div>
+        
+        <div class="film-description">
+            {{ film.tafsilot if film.tafsilot else "Bu film haqida ma'lumot yo'q." }}
+        </div>
+        
+        <a href="/" class="btn-back">← Bosh sahifaga qaytish</a>
+    </div>
+</div>
+
+<script>
+    const video = document.getElementById('videoPlayer');
+    const progressBar = document.getElementById('progressBar');
+    
+    // Yuklanish holatini ko'rsatish
+    video.addEventListener('progress', function() {
+        if (video.buffered.length > 0) {
+            const buffered = video.buffered.end(0);
+            const duration = video.duration;
+            const percent = (buffered / duration) * 100;
+            progressBar.style.width = percent + '%';
+        }
+    });
+    
+    // Darhol boshlash
+    video.load();
+    video.play().catch(e => console.log('Autoplay blocked'));
+    
+    // Keyboard shortcutlar
+    document.addEventListener('keydown', function(e) {
+        if (e.code === 'Space') {
+            e.preventDefault();
+            video.paused ? video.play() : video.pause();
+        }
+        if (e.code === 'ArrowLeft') {
+            video.currentTime -= 10;
+        }
+        if (e.code === 'ArrowRight') {
+            video.currentTime += 10;
+        }
+        if (e.code === 'KeyF') {
+            video.requestFullscreen();
+        }
+    });
+</script>
+
+</body>
+</html>
