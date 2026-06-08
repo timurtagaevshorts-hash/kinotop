@@ -1,3 +1,6 @@
+# 🎬 KINOTOP - TO'LIQ INDEX.HTML (Shorts + Kod terish tugmasi)
+
+```html
 <!DOCTYPE html>
 <html lang="uz">
 <head>
@@ -6,6 +9,8 @@
     <title>Kinotop | Shorts va kinolar</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#667eea">
     <style>
         * {
             margin: 0;
@@ -104,7 +109,7 @@
         /* ============ SCROLL INSTRUCTION ANIMATION ============ */
         .scroll-instruction {
             position: absolute;
-            bottom: 120px;
+            bottom: 150px;
             left: 0;
             right: 0;
             text-align: center;
@@ -267,6 +272,7 @@
             to { transform: translate(-50%, -50%) rotate(360deg); }
         }
 
+        /* Logo and admin */
         .logo {
             position: fixed;
             top: 15px;
@@ -318,14 +324,19 @@
             gap: 15px;
         }
 
-        /* ============ CODE BAR (PASTDA) ============ */
+        .no-shorts p {
+            font-size: 1rem;
+            opacity: 0.7;
+        }
+
+        /* ============ CODE BAR (PASTDA TUGMA) ============ */
         .code-bar {
             position: fixed;
             bottom: 0;
             left: 0;
             right: 0;
-            background: rgba(0,0,0,0.9);
-            backdrop-filter: blur(10px);
+            background: rgba(0,0,0,0.95);
+            backdrop-filter: blur(20px);
             border-top: 1px solid rgba(255,255,255,0.1);
             z-index: 100;
             transform: translateY(0);
@@ -338,7 +349,7 @@
 
         .code-button {
             width: 100%;
-            padding: 16px 20px;
+            padding: 14px 20px;
             background: transparent;
             border: none;
             display: flex;
@@ -382,7 +393,7 @@
             transition: transform 0.3s;
         }
 
-        /* ============ MODAL (Kod kiritish) ============ */
+        /* ============ MODAL (KOD TERISH OYNASI) ============ */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -405,7 +416,7 @@
             width: 90%;
             max-width: 400px;
             background: #1a1a2e;
-            border-radius: 20px;
+            border-radius: 24px;
             overflow: hidden;
             border: 1px solid rgba(102,126,234,0.3);
         }
@@ -419,6 +430,12 @@
         .modal-header h3 {
             color: white;
             font-size: 1.2rem;
+            margin-bottom: 5px;
+        }
+
+        .modal-header p {
+            color: rgba(255,255,255,0.7);
+            font-size: 0.8rem;
         }
 
         .modal-body {
@@ -427,17 +444,19 @@
 
         .code-display {
             background: #0f0f1a;
-            border-radius: 12px;
-            padding: 15px;
+            border-radius: 16px;
+            padding: 18px;
             text-align: center;
             margin-bottom: 20px;
+            border: 1px solid rgba(102,126,234,0.3);
         }
 
         .code-display span {
-            font-size: 1.8rem;
-            letter-spacing: 8px;
+            font-size: 2rem;
+            letter-spacing: 10px;
             color: white;
             font-family: monospace;
+            font-weight: 600;
         }
 
         .numpad {
@@ -450,12 +469,14 @@
         .numpad-btn {
             background: #0f0f1a;
             border: 1px solid rgba(102,126,234,0.3);
-            border-radius: 12px;
+            border-radius: 16px;
             padding: 18px;
-            font-size: 1.3rem;
+            font-size: 1.5rem;
+            font-weight: 600;
             color: white;
             text-align: center;
             cursor: pointer;
+            transition: all 0.2s;
         }
 
         .numpad-btn:active {
@@ -472,10 +493,12 @@
 
         .action-btn {
             padding: 14px;
-            border-radius: 12px;
+            border-radius: 16px;
+            font-size: 1rem;
+            font-weight: 600;
             text-align: center;
             cursor: pointer;
-            font-weight: 600;
+            transition: all 0.2s;
         }
 
         .action-btn.clear {
@@ -483,9 +506,19 @@
             color: white;
         }
 
+        .action-btn.clear:active {
+            background: #c82333;
+            transform: scale(0.95);
+        }
+
         .action-btn.backspace {
             background: #ffc107;
             color: #333;
+        }
+
+        .action-btn.backspace:active {
+            background: #e0a800;
+            transform: scale(0.95);
         }
 
         .watch-submit {
@@ -493,10 +526,16 @@
             padding: 16px;
             background: linear-gradient(135deg, #667eea, #764ba2);
             border: none;
-            border-radius: 12px;
+            border-radius: 16px;
             color: white;
+            font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .watch-submit:active {
+            transform: scale(0.98);
         }
 
         .film-loading {
@@ -534,6 +573,24 @@
         .film-loading-text {
             color: white;
             font-size: 1rem;
+        }
+
+        /* Close button */
+        .modal-close {
+            position: absolute;
+            top: 60px;
+            right: 20px;
+            background: rgba(255,255,255,0.2);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            z-index: 210;
         }
     </style>
 </head>
@@ -589,7 +646,7 @@
     {% endif %}
 </div>
 
-<!-- CODE BAR (Film kodini kiritish tugmasi) -->
+<!-- CODE BAR (PASTDA TUGMA) -->
 <div class="code-bar" id="codeBar">
     <button class="code-button" id="openModalBtn">
         <div class="code-button-left">
@@ -603,11 +660,13 @@
     </button>
 </div>
 
-<!-- MODAL (Kod kiritish oynasi) -->
+<!-- MODAL (KOD TERISH OYNASI) -->
 <div class="modal-overlay" id="modalOverlay">
+    <div class="modal-close" id="closeModalBtn">✕</div>
     <div class="modal-container">
         <div class="modal-header">
             <h3>🎬 4 xonali kod</h3>
+            <p>Film kodini kiriting</p>
         </div>
         <div class="modal-body">
             <div class="code-display">
@@ -636,7 +695,6 @@
     </div>
 </div>
 
-<!-- Film qidirish loading animatsiyasi -->
 <div class="film-loading" id="filmLoading">
     <div class="film-loading-spinner"></div>
     <div class="film-loading-text">Kino qidirilmoqda...</div>
@@ -648,7 +706,6 @@
     const startBtn = document.getElementById('startBtn');
     const shortsContainer = document.getElementById('shortsContainer');
     const scrollInstruction = document.getElementById('scrollInstruction');
-    const codeBar = document.getElementById('codeBar');
 
     startBtn.addEventListener('click', () => {
         preloader.classList.add('hide');
@@ -729,8 +786,13 @@
         const parent = btn.closest('.short-video');
         const video = parent.querySelector('video');
         if (video) {
-            video.muted = !video.muted;
-            btn.innerHTML = video.muted ? '🔇' : '🔊';
+            if (video.muted) {
+                video.muted = false;
+                btn.innerHTML = '🔊';
+            } else {
+                video.muted = true;
+                btn.innerHTML = '🔇';
+            }
         }
     }
 
@@ -752,11 +814,12 @@
         setTimeout(() => btn.style.transform = 'scale(1)', 200);
     }
 
-    // ============ MODAL CODE INPUT (FILM KODI) ============
+    // ============ MODAL CODE INPUT ============
     let currentCode = '';
     const maxCodeLength = 4;
     const codeDisplay = document.getElementById('codeDisplay');
     const modalOverlay = document.getElementById('modalOverlay');
+    const codeBar = document.getElementById('codeBar');
     const filmLoading = document.getElementById('filmLoading');
     let modalOpen = false;
 
@@ -774,15 +837,8 @@
         }
     }
 
-    function clearCode() { 
-        currentCode = ''; 
-        updateDisplay(); 
-    }
-    
-    function backspace() { 
-        currentCode = currentCode.slice(0, -1); 
-        updateDisplay(); 
-    }
+    function clearCode() { currentCode = ''; updateDisplay(); }
+    function backspace() { currentCode = currentCode.slice(0, -1); updateDisplay(); }
 
     function submitCode() {
         if (currentCode.length !== maxCodeLength) {
@@ -805,11 +861,10 @@
             })
             .catch(() => {
                 filmLoading.classList.remove('show');
-                alert('Xatolik yuz berdi!');
+                alert('Xatolik!');
             });
     }
 
-    // Numpad tugmalari
     document.querySelectorAll('.numpad-btn').forEach(btn => {
         const val = btn.getAttribute('data-value');
         if (val && val.trim()) {
@@ -821,7 +876,6 @@
     document.getElementById('backspaceBtn').addEventListener('click', backspace);
     document.getElementById('watchSubmitBtn').addEventListener('click', submitCode);
 
-    // Modal ochish/yopish
     const openModalBtn = document.getElementById('openModalBtn');
     openModalBtn.addEventListener('click', () => {
         modalOverlay.classList.add('show');
@@ -830,14 +884,12 @@
     });
 
     const closeModalBtn = document.getElementById('closeModalBtn');
-    if (closeModalBtn) {
-        closeModalBtn.addEventListener('click', () => {
-            modalOverlay.classList.remove('show');
-            codeBar.classList.remove('hidden');
-            clearCode();
-            modalOpen = false;
-        });
-    }
+    closeModalBtn.addEventListener('click', () => {
+        modalOverlay.classList.remove('show');
+        codeBar.classList.remove('hidden');
+        clearCode();
+        modalOpen = false;
+    });
 
     modalOverlay.addEventListener('click', (e) => {
         if (e.target === modalOverlay) {
@@ -848,7 +900,6 @@
         }
     });
 
-    // Klaviatura qo'llab-quvvatlash
     document.addEventListener('keydown', (e) => {
         if (modalOpen) {
             if (e.key >= '0' && e.key <= '9') {
@@ -913,3 +964,4 @@
 </script>
 </body>
 </html>
+```
