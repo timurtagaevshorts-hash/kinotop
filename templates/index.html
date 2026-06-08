@@ -3,9 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Kinotop | Shorts va kinolar</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <title>Kinotop | Premium kinolar</title>
     <style>
         * {
             margin: 0;
@@ -15,135 +13,15 @@
         }
 
         body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background: #000;
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            overflow: hidden;
+            overflow-x: hidden;
             height: 100vh;
             position: fixed;
             width: 100%;
         }
 
-        /* ============ PRELOADER ============ */
-        .preloader {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
-            z-index: 1000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: opacity 0.5s ease, visibility 0.5s ease;
-        }
-
-        .preloader.hide {
-            opacity: 0;
-            visibility: hidden;
-        }
-
-        .preloader-content {
-            text-align: center;
-            animation: fadeInUp 0.8s ease;
-        }
-
-        .preloader-logo {
-            font-size: 4rem;
-            animation: bounce 1s ease infinite;
-        }
-
-        .preloader-title {
-            font-size: 2rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, #fff, #a8b2ff);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin: 20px 0 10px;
-        }
-
-        .preloader-subtitle {
-            color: rgba(255,255,255,0.6);
-            font-size: 0.9rem;
-            margin-bottom: 30px;
-        }
-
-        .start-btn {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            border: none;
-            padding: 14px 40px;
-            border-radius: 50px;
-            color: white;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.3s, box-shadow 0.3s;
-            animation: pulse 1.5s infinite;
-        }
-
-        .start-btn:active {
-            transform: scale(0.95);
-        }
-
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(30px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-15px); }
-        }
-
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(102,126,234,0.7); }
-            70% { box-shadow: 0 0 0 15px rgba(102,126,234,0); }
-            100% { box-shadow: 0 0 0 0 rgba(102,126,234,0); }
-        }
-
-        /* ============ SCROLL INSTRUCTION ANIMATION ============ */
-        .scroll-instruction {
-            position: absolute;
-            bottom: 120px;
-            left: 0;
-            right: 0;
-            text-align: center;
-            z-index: 50;
-            animation: fadeInOut 2s infinite;
-        }
-
-        .scroll-instruction.hide {
-            opacity: 0;
-            visibility: hidden;
-        }
-
-        .scroll-arrow {
-            width: 30px;
-            height: 30px;
-            border-left: 2px solid white;
-            border-bottom: 2px solid white;
-            transform: rotate(-45deg);
-            margin: 0 auto 10px;
-            animation: arrowBounce 1.5s infinite;
-        }
-
-        .scroll-text {
-            color: rgba(255,255,255,0.8);
-            font-size: 0.8rem;
-            letter-spacing: 1px;
-        }
-
-        @keyframes arrowBounce {
-            0%, 100% { transform: rotate(-45deg) translate(0, 0); opacity: 0.3; }
-            50% { transform: rotate(-45deg) translate(10px, 10px); opacity: 1; }
-        }
-
-        @keyframes fadeInOut {
-            0%, 100% { opacity: 0.5; }
-            50% { opacity: 1; }
-        }
-
-        /* ============ SHORTS CONTAINER ============ */
+        /* SHORTS SECTION - TikTok Style */
         .shorts-container {
             position: relative;
             width: 100%;
@@ -152,11 +30,6 @@
             scroll-snap-type: y mandatory;
             scroll-behavior: smooth;
             background: #000;
-            -webkit-overflow-scrolling: touch;
-        }
-
-        .shorts-container::-webkit-scrollbar {
-            display: none;
         }
 
         .short-video {
@@ -168,7 +41,6 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            overflow: hidden;
         }
 
         .short-video video {
@@ -180,54 +52,53 @@
             left: 0;
         }
 
-        /* Video info overlay */
         .short-info {
             position: absolute;
             bottom: 100px;
-            left: 16px;
-            right: 80px;
+            left: 20px;
+            right: 20px;
+            color: white;
             z-index: 10;
-            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
-            padding: 20px 15px;
+            background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+            padding: 20px;
             border-radius: 15px;
         }
 
         .short-title {
-            color: white;
-            font-size: 1.1rem;
-            font-weight: 700;
+            font-size: 1.2rem;
+            font-weight: 600;
             margin-bottom: 5px;
             text-shadow: 0 1px 3px rgba(0,0,0,0.5);
         }
 
         .short-desc {
-            color: rgba(255,255,255,0.8);
             font-size: 0.85rem;
+            opacity: 0.9;
             text-shadow: 0 1px 2px rgba(0,0,0,0.5);
         }
 
-        /* Right side buttons */
+        /* OVERLAY BUTTONS */
         .overlay-buttons {
             position: absolute;
-            right: 12px;
-            bottom: 100px;
+            right: 15px;
+            bottom: 120px;
             z-index: 20;
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 25px;
         }
 
         .overlay-btn {
             background: rgba(0,0,0,0.5);
-            backdrop-filter: blur(8px);
-            width: 44px;
-            height: 44px;
+            backdrop-filter: blur(10px);
+            width: 45px;
+            height: 45px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
-            font-size: 1.2rem;
+            font-size: 1.3rem;
             cursor: pointer;
             transition: transform 0.2s;
         }
@@ -236,54 +107,161 @@
             transform: scale(0.9);
         }
 
-        /* Download button */
-        .download-short {
-            background: rgba(0,0,0,0.5);
-            backdrop-filter: blur(8px);
-            width: 44px;
-            height: 44px;
+        /* FLOATING CODE INPUT - Asosiy element */
+        .floating-input {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            cursor: pointer;
+        }
+
+        .floating-input.expanded {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 500px;
+            z-index: 200;
+        }
+
+        .input-card {
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(20px);
+            border-radius: 60px;
+            padding: 8px 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            border: 1px solid rgba(255,255,255,0.2);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            transition: all 0.3s;
+        }
+
+        .floating-input.expanded .input-card {
+            border-radius: 30px;
+            padding: 20px 25px;
+            flex-direction: column;
+            width: 100%;
+            background: rgba(0, 0, 0, 0.95);
+        }
+
+        .input-icon {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            width: 45px;
+            height: 45px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
+            font-size: 1.3rem;
+        }
+
+        .input-text {
+            flex: 1;
+        }
+
+        .input-text h4 {
+            color: white;
+            font-size: 0.85rem;
+            margin-bottom: 3px;
+        }
+
+        .input-text p {
+            color: rgba(255,255,255,0.6);
+            font-size: 0.7rem;
+        }
+
+        .floating-input.expanded .input-text h4 {
             font-size: 1.2rem;
-            cursor: pointer;
+            text-align: center;
         }
 
-        /* Loading indicator */
-        .short-loading {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 40px;
-            height: 40px;
-            border: 3px solid rgba(255,255,255,0.3);
-            border-top-color: #667eea;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            z-index: 15;
+        .floating-input.expanded .input-text p {
+            text-align: center;
+            font-size: 0.85rem;
+        }
+
+        /* Kod kiritish formasi (kengaytirilganda) */
+        .code-form {
             display: none;
+            width: 100%;
+            margin-top: 15px;
         }
 
-        @keyframes spin {
-            to { transform: translate(-50%, -50%) rotate(360deg); }
+        .floating-input.expanded .code-form {
+            display: block;
         }
 
-        /* Logo and admin */
+        .code-input {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.2rem;
+            border: none;
+            border-radius: 50px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            text-align: center;
+            letter-spacing: 2px;
+            outline: none;
+        }
+
+        .code-input::placeholder {
+            color: rgba(255,255,255,0.5);
+        }
+
+        .watch-btn {
+            width: 100%;
+            margin-top: 15px;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+            border-radius: 50px;
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .watch-btn:active {
+            transform: scale(0.98);
+        }
+
+        .close-btn {
+            position: absolute;
+            top: -40px;
+            right: 0;
+            background: rgba(255,255,255,0.2);
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+
+        /* Logo */
         .logo {
             position: fixed;
-            top: 15px;
-            left: 15px;
+            top: 20px;
+            left: 20px;
             z-index: 50;
             background: rgba(0,0,0,0.5);
             backdrop-filter: blur(10px);
-            padding: 6px 16px;
-            border-radius: 30px;
+            padding: 8px 20px;
+            border-radius: 40px;
             color: white;
             font-weight: bold;
-            font-size: 0.9rem;
+            font-size: 1.2rem;
+            letter-spacing: 2px;
         }
 
         .logo span {
@@ -292,22 +270,48 @@
             -webkit-text-fill-color: transparent;
         }
 
+        /* Admin button */
         .admin-btn {
             position: fixed;
-            top: 15px;
-            right: 15px;
+            top: 20px;
+            right: 20px;
             z-index: 50;
             background: rgba(0,0,0,0.5);
             backdrop-filter: blur(10px);
-            width: 38px;
-            height: 38px;
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
             text-decoration: none;
-            font-size: 1rem;
+            font-size: 1.2rem;
+        }
+
+        /* Scrollbar yashirish */
+        .shorts-container::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* Loading */
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            z-index: 200;
+            display: none;
+        }
+
+        @keyframes spin {
+            to { transform: translate(-50%, -50%) rotate(360deg); }
         }
 
         /* No shorts message */
@@ -319,252 +323,23 @@
             justify-content: center;
             color: white;
             text-align: center;
-            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
-            flex-direction: column;
-            gap: 15px;
+            background: linear-gradient(135deg, #0f0c29, #302b63);
         }
 
         .no-shorts p {
-            font-size: 1rem;
+            font-size: 1.2rem;
             opacity: 0.7;
         }
 
-        /* Code bar */
-        .code-bar {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: rgba(0,0,0,0.9);
-            backdrop-filter: blur(10px);
-            border-top: 1px solid rgba(255,255,255,0.1);
-            z-index: 100;
-            transform: translateY(0);
-            transition: transform 0.3s ease;
-        }
-
-        .code-bar.hidden {
-            transform: translateY(100%);
-        }
-
-        .code-button {
-            width: 100%;
-            padding: 16px 20px;
-            background: transparent;
-            border: none;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            cursor: pointer;
-        }
-
-        .code-button-left {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .code-icon {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            width: 44px;
-            height: 44px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.2rem;
-        }
-
-        .code-text h4 {
-            color: white;
-            font-size: 0.9rem;
-            font-weight: 600;
-            margin-bottom: 2px;
-        }
-
-        .code-text p {
-            color: rgba(255,255,255,0.5);
-            font-size: 0.7rem;
-        }
-
-        .code-arrow {
-            color: rgba(255,255,255,0.5);
-            font-size: 1rem;
-            transition: transform 0.3s;
-        }
-
-        /* Modal */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.95);
-            z-index: 200;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            backdrop-filter: blur(10px);
-        }
-
-        .modal-overlay.show {
-            display: flex;
-        }
-
-        .modal-container {
-            width: 90%;
-            max-width: 400px;
-            background: #1a1a2e;
-            border-radius: 20px;
-            overflow: hidden;
-            border: 1px solid rgba(102,126,234,0.3);
-        }
-
-        .modal-header {
-            padding: 20px;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            text-align: center;
-        }
-
-        .modal-header h3 {
-            color: white;
-            font-size: 1.2rem;
-        }
-
-        .modal-body {
-            padding: 25px 20px;
-        }
-
-        .code-display {
-            background: #0f0f1a;
-            border-radius: 12px;
-            padding: 15px;
-            text-align: center;
-            margin-bottom: 20px;
-        }
-
-        .code-display span {
-            font-size: 1.8rem;
-            letter-spacing: 8px;
-            color: white;
-            font-family: monospace;
-        }
-
-        .numpad {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 12px;
-            margin-bottom: 20px;
-        }
-
-        .numpad-btn {
-            background: #0f0f1a;
-            border: 1px solid rgba(102,126,234,0.3);
-            border-radius: 12px;
-            padding: 18px;
-            font-size: 1.3rem;
-            color: white;
-            text-align: center;
-            cursor: pointer;
-        }
-
-        .numpad-btn:active {
-            background: #667eea;
-            transform: scale(0.95);
-        }
-
-        .numpad-actions {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            margin-bottom: 15px;
-        }
-
-        .action-btn {
-            padding: 14px;
-            border-radius: 12px;
-            text-align: center;
-            cursor: pointer;
-            font-weight: 600;
-        }
-
-        .action-btn.clear {
-            background: #dc3545;
-            color: white;
-        }
-
-        .action-btn.backspace {
-            background: #ffc107;
-            color: #333;
-        }
-
-        .watch-submit {
-            width: 100%;
-            padding: 16px;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            border: none;
-            border-radius: 12px;
-            color: white;
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-        .film-loading {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.95);
-            z-index: 300;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-            gap: 20px;
-            visibility: hidden;
-            opacity: 0;
-            transition: all 0.3s;
-        }
-
-        .film-loading.show {
-            visibility: visible;
-            opacity: 1;
-        }
-
-        .film-loading-spinner {
-            width: 50px;
-            height: 50px;
-            border: 3px solid rgba(102,126,234,0.3);
-            border-top-color: #667eea;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
-
-        .film-loading-text {
-            color: white;
-            font-size: 1rem;
+        /* Animation */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
         }
     </style>
 </head>
 <body>
-
-<!-- PRELOADER -->
-<div class="preloader" id="preloader">
-    <div class="preloader-content">
-        <div class="preloader-logo">🎬</div>
-        <div class="preloader-title">KINOTOP</div>
-        <div class="preloader-subtitle">Eng yangi va qiziqarli shortslar</div>
-        <button class="start-btn" id="startBtn">🎥 Kirish</button>
-    </div>
-</div>
-
-<!-- SCROLL INSTRUCTION (Animatsiya) -->
-<div class="scroll-instruction" id="scrollInstruction">
-    <div class="scroll-arrow"></div>
-    <div class="scroll-text">👆 Shortslarni ko'rish uchun yuqoriga suring</div>
-</div>
 
 <div class="logo">
     <span>🎬 KINOTOP</span>
@@ -572,365 +347,210 @@
 
 <a href="/admin" class="admin-btn">🔐</a>
 
-<!-- SHORTS CONTAINER -->
-<div class="shorts-container" id="shortsContainer" style="display: none;">
+<div class="loading" id="loading"></div>
+
+<!-- SHORTS SECTION (TikTok Style) -->
+<div class="shorts-container" id="shortsContainer">
     {% if shorts %}
         {% for short in shorts %}
-        <div class="short-video" data-id="{{ short.id }}" data-index="{{ loop.index0 }}">
-            <video preload="auto" playsinline muted loop>
+        <div class="short-video" data-id="{{ short.id }}">
+            <video preload="metadata" loop muted playsinline>
                 <source src="/stream-shorts/{{ short.id }}" type="video/mp4">
             </video>
-            <div class="short-loading" id="loading-{{ short.id }}"></div>
             <div class="short-info">
                 <div class="short-title">{{ short.sarlavha }}</div>
                 <div class="short-desc">{{ short.tafsilot or 'Qiziqarli video' }}</div>
             </div>
             <div class="overlay-buttons">
-                <div class="overlay-btn sound-btn" data-id="{{ short.id }}">🔇</div>
-                <div class="overlay-btn like-btn">❤️</div>
-                <div class="download-short" data-id="{{ short.id }}" data-sarlavha="{{ short.sarlavha }}">📥</div>
+                <div class="overlay-btn" onclick="toggleMute(this)">
+                    🔊
+                </div>
+                <div class="overlay-btn" onclick="likeVideo(this)">
+                    ❤️
+                </div>
             </div>
         </div>
         {% endfor %}
     {% else %}
         <div class="no-shorts">
-            <p>📱 Hozircha shortslar yo'q</p>
-            <p style="font-size: 0.8rem;">Admin panel orqali video qo'shing</p>
+            <p>📱 Hozircha shorts videolar yo'q<br>Admin panel orqali qo'shing</p>
         </div>
     {% endif %}
 </div>
 
-<!-- CODE BAR -->
-<div class="code-bar" id="codeBar">
-    <button class="code-button" id="openModalBtn">
-        <div class="code-button-left">
-            <div class="code-icon">🎬</div>
-            <div class="code-text">
-                <h4>4 xonali kodni kiriting</h4>
-                <p>Filmni tomosha qilish</p>
-            </div>
+<!-- FLOATING CODE INPUT -->
+<div class="floating-input" id="floatingInput" onclick="expandInput(event)">
+    <div class="input-card">
+        <div class="input-icon">
+            🎬
         </div>
-        <div class="code-arrow" id="codeArrow">▲</div>
-    </button>
-</div>
-
-<!-- MODAL -->
-<div class="modal-overlay" id="modalOverlay">
-    <div class="modal-container">
-        <div class="modal-header">
-            <h3>🎬 4 xonali kod</h3>
+        <div class="input-text">
+            <h4>Film kodini kiriting</h4>
+            <p>To'liq sifatda tomosha qiling</p>
         </div>
-        <div class="modal-body">
-            <div class="code-display">
-                <span id="codeDisplay">____</span>
-            </div>
-            <div class="numpad">
-                <div class="numpad-btn" data-value="1">1</div>
-                <div class="numpad-btn" data-value="2">2</div>
-                <div class="numpad-btn" data-value="3">3</div>
-                <div class="numpad-btn" data-value="4">4</div>
-                <div class="numpad-btn" data-value="5">5</div>
-                <div class="numpad-btn" data-value="6">6</div>
-                <div class="numpad-btn" data-value="7">7</div>
-                <div class="numpad-btn" data-value="8">8</div>
-                <div class="numpad-btn" data-value="9">9</div>
-                <div class="numpad-btn" data-value=""></div>
-                <div class="numpad-btn" data-value="0">0</div>
-                <div class="numpad-btn" data-value=""></div>
-            </div>
-            <div class="numpad-actions">
-                <div class="action-btn clear" id="clearBtn">O'chirish</div>
-                <div class="action-btn backspace" id="backspaceBtn">⌫</div>
-            </div>
-            <button class="watch-submit" id="watchSubmitBtn">🎬 Tomosha qilish</button>
+        <div class="code-form" id="codeForm">
+            <input type="text" class="code-input" id="filmKod" placeholder="Masalan: AVENGER001" autocomplete="off">
+            <button class="watch-btn" onclick="watchFilm()">🎬 Tomosha qilish</button>
         </div>
+        <div class="close-btn" id="closeBtn" onclick="closeInput(event)">✕</div>
     </div>
 </div>
 
-<div class="film-loading" id="filmLoading">
-    <div class="film-loading-spinner"></div>
-    <div class="film-loading-text">Kino qidirilmoqda...</div>
-</div>
-
 <script>
-    // ============ PRELOADER ============
-    const preloader = document.getElementById('preloader');
-    const startBtn = document.getElementById('startBtn');
+    // Video autoplay on scroll (TikTok style)
     const shortsContainer = document.getElementById('shortsContainer');
-    const scrollInstruction = document.getElementById('scrollInstruction');
-    const codeArrow = document.getElementById('codeArrow');
-    const codeBar = document.getElementById('codeBar');
-
-    startBtn.addEventListener('click', () => {
-        preloader.classList.add('hide');
-        shortsContainer.style.display = 'block';
-        
-        // Scroll instruction ni 3 soniyadan keyin yashirish
-        setTimeout(() => {
-            scrollInstruction.classList.add('hide');
-        }, 4000);
-        
-        // Birinchi videoni o'ynatish
-        setTimeout(() => {
-            if (allVideos.length > 0) playVideo(0);
-        }, 300);
-    });
-
-    // ============ SHORTS PLAYER ============
-    let allVideos = [];
-    let currentIndex = 0;
-    let currentVideo = null;
-
-    function getAllVideos() {
-        allVideos = Array.from(document.querySelectorAll('.short-video'));
-    }
+    const videos = document.querySelectorAll('.short-video video');
+    let currentVideoIndex = 0;
+    let isPlaying = false;
 
     function playVideo(index) {
-        allVideos.forEach((item, i) => {
-            const video = item.querySelector('video');
-            const soundBtn = item.querySelector('.sound-btn');
+        videos.forEach((video, i) => {
             video.pause();
-            video.muted = true;
-            if (soundBtn) soundBtn.innerHTML = '🔇';
+            video.currentTime = 0;
         });
-        
-        if (allVideos[index]) {
-            currentVideo = allVideos[index].querySelector('video');
-            const soundBtn = allVideos[index].querySelector('.sound-btn');
-            currentVideo.muted = false;
-            currentVideo.play().catch(e => console.log());
-            if (soundBtn) soundBtn.innerHTML = '🔊';
-            currentIndex = index;
+        if (videos[index]) {
+            videos[index].play();
+            videos[index].muted = false;
+            currentVideoIndex = index;
+            isPlaying = true;
         }
     }
 
-    function getCurrentIndex() {
-        const scrollTop = shortsContainer.scrollTop;
-        const itemHeight = window.innerHeight;
-        return Math.round(scrollTop / itemHeight);
+    function pauseCurrent() {
+        if (videos[currentVideoIndex]) {
+            videos[currentVideoIndex].pause();
+            isPlaying = false;
+        }
     }
 
-    let scrollTimeout;
+    // Scroll event
     shortsContainer.addEventListener('scroll', () => {
-        if (scrollTimeout) clearTimeout(scrollTimeout);
-        scrollTimeout = setTimeout(() => {
-            const newIndex = getCurrentIndex();
-            if (newIndex !== currentIndex && newIndex >= 0 && newIndex < allVideos.length) {
-                playVideo(newIndex);
-                
-                // Scroll instruction ni yashirish (agar birinchi marta scrol qilingan bo'lsa)
-                if (!scrollInstruction.classList.contains('hide')) {
-                    scrollInstruction.classList.add('hide');
-                }
-            }
-        }, 50);
+        const scrollTop = shortsContainer.scrollTop;
+        const itemHeight = window.innerHeight;
+        const newIndex = Math.round(scrollTop / itemHeight);
+        
+        if (newIndex !== currentVideoIndex && newIndex >= 0 && newIndex < videos.length) {
+            playVideo(newIndex);
+        }
     });
 
-    // Touch scroll detection for instruction
+    // Touch events for better mobile experience
     let touchStartY = 0;
     shortsContainer.addEventListener('touchstart', (e) => {
         touchStartY = e.touches[0].clientY;
     });
-    
-    shortsContainer.addEventListener('touchmove', (e) => {
-        const touchEndY = e.touches[0].clientY;
-        if (touchStartY - touchEndY > 30) {
-            if (!scrollInstruction.classList.contains('hide')) {
-                scrollInstruction.classList.add('hide');
+
+    shortsContainer.addEventListener('touchend', (e) => {
+        const touchEndY = e.changedTouches[0].clientY;
+        const diff = touchStartY - touchEndY;
+        if (Math.abs(diff) > 50) {
+            // Scroll detected, play current video
+            const scrollTop = shortsContainer.scrollTop;
+            const itemHeight = window.innerHeight;
+            const newIndex = Math.round(scrollTop / itemHeight);
+            if (newIndex !== currentVideoIndex) {
+                playVideo(newIndex);
             }
         }
     });
 
-    // Toggle sound
-    function toggleSound(btn, videoId) {
-        const parent = btn.closest('.short-video');
-        const video = parent.querySelector('video');
+    // Start first video
+    if (videos.length > 0) {
+        setTimeout(() => {
+            playVideo(0);
+        }, 500);
+    }
+
+    // Mute/Unmute function
+    function toggleMute(btn) {
+        const video = btn.closest('.short-video').querySelector('video');
         if (video) {
-            if (video.muted) {
-                video.muted = false;
-                btn.innerHTML = '🔊';
-            } else {
-                video.muted = true;
-                btn.innerHTML = '🔇';
-            }
+            video.muted = !video.muted;
+            btn.innerHTML = video.muted ? '🔇' : '🔊';
         }
     }
 
     // Like animation
     function likeVideo(btn) {
         btn.style.transform = 'scale(1.2)';
-        setTimeout(() => btn.style.transform = 'scale(1)', 200);
+        setTimeout(() => {
+            btn.style.transform = 'scale(1)';
+        }, 200);
         btn.innerHTML = '❤️';
-        setTimeout(() => btn.innerHTML = '❤️', 1000);
     }
 
-    // Download short
-    function downloadShort(btn) {
-        const shortId = btn.getAttribute('data-id');
-        const sarlavha = btn.getAttribute('data-sarlavha');
-        const link = document.createElement('a');
-        link.href = `/download-shorts/${shortId}`;
-        link.download = `${sarlavha}.mp4`;
-        link.click();
-        
-        btn.style.transform = 'scale(1.2)';
-        setTimeout(() => btn.style.transform = 'scale(1)', 200);
-    }
+    // ============ FLOATING INPUT LOGIC ============
+    const floatingInput = document.getElementById('floatingInput');
+    const codeForm = document.getElementById('codeForm');
+    const closeBtn = document.getElementById('closeBtn');
+    let isExpanded = false;
 
-    // ============ MODAL CODE INPUT ============
-    let currentCode = '';
-    const maxCodeLength = 4;
-    const codeDisplay = document.getElementById('codeDisplay');
-    const modalOverlay = document.getElementById('modalOverlay');
-    const filmLoading = document.getElementById('filmLoading');
-    let modalOpen = false;
-
-    function updateDisplay() {
-        codeDisplay.textContent = currentCode.padEnd(maxCodeLength, '_');
-    }
-
-    function addDigit(d) {
-        if (currentCode.length < maxCodeLength) {
-            currentCode += d;
-            updateDisplay();
+    function expandInput(event) {
+        if (event.target.classList.contains('close-btn') || event.target === closeBtn) {
+            return;
         }
-        if (currentCode.length === maxCodeLength) {
-            submitCode();
+        if (!isExpanded) {
+            floatingInput.classList.add('expanded');
+            isExpanded = true;
+            setTimeout(() => {
+                document.getElementById('filmKod').focus();
+            }, 300);
         }
     }
 
-    function clearCode() { currentCode = ''; updateDisplay(); }
-    function backspace() { currentCode = currentCode.slice(0, -1); updateDisplay(); }
+    function closeInput(event) {
+        event.stopPropagation();
+        floatingInput.classList.remove('expanded');
+        isExpanded = false;
+        document.getElementById('filmKod').value = '';
+    }
 
-    function submitCode() {
-        if (currentCode.length !== maxCodeLength) {
-            alert('4 xonali kod kiriting!');
+    function watchFilm() {
+        const kod = document.getElementById('filmKod').value.trim().toUpperCase();
+        if (!kod) {
+            alert('Iltimos, film kodini kiriting!');
             return;
         }
         
-        filmLoading.classList.add('show');
+        const loading = document.getElementById('loading');
+        loading.style.display = 'block';
         
-        fetch(`/api/check/${currentCode}`)
-            .then(res => res.json())
-            .then(data => {
-                if (data.exists) {
-                    window.location.href = `/film/${currentCode}`;
+        // Check if film exists
+        fetch(`/api/check/${kod}`)
+            .then(response => {
+                if (response.ok) {
+                    window.location.href = `/film/${kod}`;
                 } else {
-                    filmLoading.classList.remove('show');
-                    alert('Bunday kod topilmadi!');
-                    clearCode();
+                    alert('Bunday kodli film topilmadi!');
+                    loading.style.display = 'none';
                 }
             })
             .catch(() => {
-                filmLoading.classList.remove('show');
-                alert('Xatolik!');
+                alert('Xatolik yuz berdi!');
+                loading.style.display = 'none';
             });
     }
 
-    // Numpad
-    document.querySelectorAll('.numpad-btn').forEach(btn => {
-        const val = btn.getAttribute('data-value');
-        if (val && val.trim()) {
-            btn.addEventListener('click', () => addDigit(val));
-        }
-    });
-    
-    document.getElementById('clearBtn').addEventListener('click', clearCode);
-    document.getElementById('backspaceBtn').addEventListener('click', backspace);
-    document.getElementById('watchSubmitBtn').addEventListener('click', submitCode);
-
-    // Modal open/close with animation
-    const openModalBtn = document.getElementById('openModalBtn');
-    openModalBtn.addEventListener('click', () => {
-        modalOverlay.classList.add('show');
-        codeBar.classList.add('hidden');
-        modalOpen = true;
-    });
-
-    const closeModalBtn = document.getElementById('closeModalBtn');
-    if (closeModalBtn) {
-        closeModalBtn.addEventListener('click', () => {
-            modalOverlay.classList.remove('show');
-            codeBar.classList.remove('hidden');
-            clearCode();
-            modalOpen = false;
-        });
-    }
-
-    modalOverlay.addEventListener('click', (e) => {
-        if (e.target === modalOverlay) {
-            modalOverlay.classList.remove('show');
-            codeBar.classList.remove('hidden');
-            clearCode();
-            modalOpen = false;
+    // Enter key support
+    document.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter' && isExpanded) {
+            watchFilm();
         }
     });
 
-    // Keyboard support
-    document.addEventListener('keydown', (e) => {
-        if (modalOpen) {
-            if (e.key >= '0' && e.key <= '9') {
-                addDigit(e.key);
-            } else if (e.key === 'Backspace') {
-                backspace();
-            } else if (e.key === 'Delete') {
-                clearCode();
-            } else if (e.key === 'Enter') {
-                submitCode();
-            } else if (e.key === 'Escape') {
-                modalOverlay.classList.remove('show');
-                codeBar.classList.remove('hidden');
-                clearCode();
-                modalOpen = false;
-            }
-        }
-    });
-
-    // ============ INITIALIZATION ============
-    window.addEventListener('load', () => {
-        getAllVideos();
-        
-        // Event listeners for buttons
-        document.querySelectorAll('.sound-btn').forEach(btn => {
-            const videoId = btn.getAttribute('data-id');
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                toggleSound(btn, videoId);
-            });
-        });
-        
-        document.querySelectorAll('.like-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                likeVideo(btn);
-            });
-        });
-        
-        document.querySelectorAll('.download-short').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                downloadShort(btn);
-            });
-        });
-        
-        // Auto play first video after preloader
-        setTimeout(() => {
-            if (allVideos.length > 0 && shortsContainer.style.display === 'block') {
-                playVideo(0);
-            }
-        }, 500);
-    });
-
-    // Background video pause
-    document.addEventListener('visibilitychange', () => {
+    // Background video playback
+    document.addEventListener('visibilitychange', function() {
         if (document.hidden) {
-            if (currentVideo) currentVideo.pause();
+            if (videos[currentVideoIndex]) {
+                videos[currentVideoIndex].pause();
+            }
         } else {
-            if (currentVideo && currentVideo.paused && shortsContainer.style.display === 'block') {
-                currentVideo.play().catch(e => console.log());
+            if (videos[currentVideoIndex] && !videos[currentVideoIndex].paused === false) {
+                videos[currentVideoIndex].play();
             }
         }
     });
 </script>
+
 </body>
 </html>
