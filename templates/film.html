@@ -180,7 +180,6 @@
             left: 0;
         }
 
-        /* Video info overlay */
         .short-info {
             position: absolute;
             bottom: 100px;
@@ -206,7 +205,6 @@
             text-shadow: 0 1px 2px rgba(0,0,0,0.5);
         }
 
-        /* Right side buttons */
         .overlay-buttons {
             position: absolute;
             right: 12px;
@@ -236,7 +234,6 @@
             transform: scale(0.9);
         }
 
-        /* Download button */
         .download-short {
             background: rgba(0,0,0,0.5);
             backdrop-filter: blur(8px);
@@ -251,7 +248,6 @@
             cursor: pointer;
         }
 
-        /* Loading indicator */
         .short-loading {
             position: absolute;
             top: 50%;
@@ -271,7 +267,6 @@
             to { transform: translate(-50%, -50%) rotate(360deg); }
         }
 
-        /* Logo and admin */
         .logo {
             position: fixed;
             top: 15px;
@@ -310,7 +305,6 @@
             font-size: 1rem;
         }
 
-        /* No shorts message */
         .no-shorts {
             width: 100%;
             height: 100vh;
@@ -324,12 +318,7 @@
             gap: 15px;
         }
 
-        .no-shorts p {
-            font-size: 1rem;
-            opacity: 0.7;
-        }
-
-        /* Code bar */
+        /* ============ CODE BAR (PASTDA) ============ */
         .code-bar {
             position: fixed;
             bottom: 0;
@@ -393,7 +382,7 @@
             transition: transform 0.3s;
         }
 
-        /* Modal */
+        /* ============ MODAL (Kod kiritish) ============ */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -560,7 +549,7 @@
     </div>
 </div>
 
-<!-- SCROLL INSTRUCTION (Animatsiya) -->
+<!-- SCROLL INSTRUCTION -->
 <div class="scroll-instruction" id="scrollInstruction">
     <div class="scroll-arrow"></div>
     <div class="scroll-text">👆 Shortslarni ko'rish uchun yuqoriga suring</div>
@@ -600,7 +589,7 @@
     {% endif %}
 </div>
 
-<!-- CODE BAR -->
+<!-- CODE BAR (Film kodini kiritish tugmasi) -->
 <div class="code-bar" id="codeBar">
     <button class="code-button" id="openModalBtn">
         <div class="code-button-left">
@@ -614,7 +603,7 @@
     </button>
 </div>
 
-<!-- MODAL -->
+<!-- MODAL (Kod kiritish oynasi) -->
 <div class="modal-overlay" id="modalOverlay">
     <div class="modal-container">
         <div class="modal-header">
@@ -647,6 +636,7 @@
     </div>
 </div>
 
+<!-- Film qidirish loading animatsiyasi -->
 <div class="film-loading" id="filmLoading">
     <div class="film-loading-spinner"></div>
     <div class="film-loading-text">Kino qidirilmoqda...</div>
@@ -658,19 +648,16 @@
     const startBtn = document.getElementById('startBtn');
     const shortsContainer = document.getElementById('shortsContainer');
     const scrollInstruction = document.getElementById('scrollInstruction');
-    const codeArrow = document.getElementById('codeArrow');
     const codeBar = document.getElementById('codeBar');
 
     startBtn.addEventListener('click', () => {
         preloader.classList.add('hide');
         shortsContainer.style.display = 'block';
         
-        // Scroll instruction ni 3 soniyadan keyin yashirish
         setTimeout(() => {
             scrollInstruction.classList.add('hide');
         }, 4000);
         
-        // Birinchi videoni o'ynatish
         setTimeout(() => {
             if (allVideos.length > 0) playVideo(0);
         }, 300);
@@ -717,8 +704,6 @@
             const newIndex = getCurrentIndex();
             if (newIndex !== currentIndex && newIndex >= 0 && newIndex < allVideos.length) {
                 playVideo(newIndex);
-                
-                // Scroll instruction ni yashirish (agar birinchi marta scrol qilingan bo'lsa)
                 if (!scrollInstruction.classList.contains('hide')) {
                     scrollInstruction.classList.add('hide');
                 }
@@ -726,7 +711,6 @@
         }, 50);
     });
 
-    // Touch scroll detection for instruction
     let touchStartY = 0;
     shortsContainer.addEventListener('touchstart', (e) => {
         touchStartY = e.touches[0].clientY;
@@ -741,22 +725,15 @@
         }
     });
 
-    // Toggle sound
     function toggleSound(btn, videoId) {
         const parent = btn.closest('.short-video');
         const video = parent.querySelector('video');
         if (video) {
-            if (video.muted) {
-                video.muted = false;
-                btn.innerHTML = '🔊';
-            } else {
-                video.muted = true;
-                btn.innerHTML = '🔇';
-            }
+            video.muted = !video.muted;
+            btn.innerHTML = video.muted ? '🔇' : '🔊';
         }
     }
 
-    // Like animation
     function likeVideo(btn) {
         btn.style.transform = 'scale(1.2)';
         setTimeout(() => btn.style.transform = 'scale(1)', 200);
@@ -764,7 +741,6 @@
         setTimeout(() => btn.innerHTML = '❤️', 1000);
     }
 
-    // Download short
     function downloadShort(btn) {
         const shortId = btn.getAttribute('data-id');
         const sarlavha = btn.getAttribute('data-sarlavha');
@@ -772,12 +748,11 @@
         link.href = `/download-shorts/${shortId}`;
         link.download = `${sarlavha}.mp4`;
         link.click();
-        
         btn.style.transform = 'scale(1.2)';
         setTimeout(() => btn.style.transform = 'scale(1)', 200);
     }
 
-    // ============ MODAL CODE INPUT ============
+    // ============ MODAL CODE INPUT (FILM KODI) ============
     let currentCode = '';
     const maxCodeLength = 4;
     const codeDisplay = document.getElementById('codeDisplay');
@@ -799,8 +774,15 @@
         }
     }
 
-    function clearCode() { currentCode = ''; updateDisplay(); }
-    function backspace() { currentCode = currentCode.slice(0, -1); updateDisplay(); }
+    function clearCode() { 
+        currentCode = ''; 
+        updateDisplay(); 
+    }
+    
+    function backspace() { 
+        currentCode = currentCode.slice(0, -1); 
+        updateDisplay(); 
+    }
 
     function submitCode() {
         if (currentCode.length !== maxCodeLength) {
@@ -823,11 +805,11 @@
             })
             .catch(() => {
                 filmLoading.classList.remove('show');
-                alert('Xatolik!');
+                alert('Xatolik yuz berdi!');
             });
     }
 
-    // Numpad
+    // Numpad tugmalari
     document.querySelectorAll('.numpad-btn').forEach(btn => {
         const val = btn.getAttribute('data-value');
         if (val && val.trim()) {
@@ -839,7 +821,7 @@
     document.getElementById('backspaceBtn').addEventListener('click', backspace);
     document.getElementById('watchSubmitBtn').addEventListener('click', submitCode);
 
-    // Modal open/close with animation
+    // Modal ochish/yopish
     const openModalBtn = document.getElementById('openModalBtn');
     openModalBtn.addEventListener('click', () => {
         modalOverlay.classList.add('show');
@@ -866,7 +848,7 @@
         }
     });
 
-    // Keyboard support
+    // Klaviatura qo'llab-quvvatlash
     document.addEventListener('keydown', (e) => {
         if (modalOpen) {
             if (e.key >= '0' && e.key <= '9') {
@@ -890,7 +872,6 @@
     window.addEventListener('load', () => {
         getAllVideos();
         
-        // Event listeners for buttons
         document.querySelectorAll('.sound-btn').forEach(btn => {
             const videoId = btn.getAttribute('data-id');
             btn.addEventListener('click', (e) => {
@@ -913,7 +894,6 @@
             });
         });
         
-        // Auto play first video after preloader
         setTimeout(() => {
             if (allVideos.length > 0 && shortsContainer.style.display === 'block') {
                 playVideo(0);
@@ -921,7 +901,6 @@
         }, 500);
     });
 
-    // Background video pause
     document.addEventListener('visibilitychange', () => {
         if (document.hidden) {
             if (currentVideo) currentVideo.pause();
