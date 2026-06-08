@@ -84,7 +84,7 @@
             justify-content: center;
         }
         
-        /* YouTube iframe - barcha logo va tugmalarni yashirish */
+        /* YouTube iframe - barcha logo, tugmalar, YouTube linklari yashirilgan */
         .youtube-player {
             width: 100%;
             height: 100%;
@@ -92,6 +92,19 @@
             position: absolute;
             top: 0;
             left: 0;
+            pointer-events: none;
+        }
+        
+        /* Qoplamali div - YouTube tugmalariga bosishni bloklash */
+        .player-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            background: transparent;
+            cursor: pointer;
         }
 
         /* Custom Fullscreen Button */
@@ -99,26 +112,54 @@
             position: absolute;
             bottom: 20px;
             right: 20px;
-            background: rgba(0, 0, 0, 0.6);
+            background: rgba(0, 0, 0, 0.7);
             backdrop-filter: blur(10px);
-            border: none;
+            border: 1px solid rgba(255,255,255,0.2);
             color: white;
             width: 48px;
             height: 48px;
             border-radius: 50%;
             font-size: 1.3rem;
             cursor: pointer;
-            z-index: 100;
+            z-index: 20;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        .custom-fullscreen:active { 
+            transform: scale(0.95); 
+            background: #667eea;
+        }
+
+        /* Custom Play/Pause Button */
+        .custom-play {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            font-size: 1.8rem;
+            cursor: pointer;
+            z-index: 20;
             display: flex;
             align-items: center;
             justify-content: center;
             transition: all 0.2s;
             opacity: 0;
-            animation: fadeIn 0.5s forwards 1s;
         }
-        .custom-fullscreen:active { 
-            transform: scale(0.95); 
-            background: rgba(102,126,234,0.8);
+        .video-wrapper:hover .custom-play {
+            opacity: 1;
+        }
+        .custom-play:active { 
+            transform: translate(-50%, -50%) scale(0.95); 
+            background: #667eea;
         }
 
         /* Video Info */
@@ -180,13 +221,8 @@
         }
         .loading-text { color: white; font-size: 0.9rem; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes fadeIn { to { opacity: 1; } }
 
         /* Fullscreen mode */
-        .video-wrapper:-webkit-full-screen {
-            width: 100%;
-            height: 100%;
-        }
         .video-wrapper:fullscreen {
             width: 100%;
             height: 100%;
@@ -194,13 +230,14 @@
         .video-wrapper:fullscreen .youtube-player {
             height: 100%;
         }
-        .video-wrapper:fullscreen .custom-fullscreen {
-            bottom: 30px;
-            right: 30px;
+        .video-wrapper:fullscreen .custom-fullscreen,
+        .video-wrapper:fullscreen .custom-play {
+            position: fixed;
         }
 
         @media (max-width: 768px) {
             .custom-fullscreen { width: 42px; height: 42px; font-size: 1.1rem; }
+            .custom-play { width: 55px; height: 55px; font-size: 1.4rem; }
             .info h1 { font-size: 1rem; }
         }
     </style>
@@ -224,17 +261,25 @@
 
 <div class="container">
     <div class="video-wrapper" id="videoWrapper">
-        <!-- YouTube iframe - logo va tugmalar yashirilgan -->
+        <!-- YouTube iframe - barcha logo, tugmalar, linklar yashirilgan -->
         <iframe 
             id="youtubeFrame"
             class="youtube-player"
-            src="{{ film.embed_url }}&modestbranding=1&showinfo=0&controls=0&rel=0&iv_load_policy=3&fs=0&disablekb=1"
+            src="{{ film.embed_url }}&modestbranding=1&showinfo=0&controls=0&rel=0&iv_load_policy=3&fs=0&disablekb=1&hl=uz&cc_load_policy=0&playsinline=1"
             frameborder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowfullscreen="true"
             webkitallowfullscreen="true"
             mozallowfullscreen="true">
         </iframe>
+        
+        <!-- Qoplamali div - YouTube tugmalariga bosishni bloklaydi -->
+        <div class="player-overlay" id="playerOverlay"></div>
+        
+        <!-- Custom Play/Pause Button -->
+        <button class="custom-play" id="customPlayBtn">
+            <i class="fas fa-play"></i>
+        </button>
         
         <!-- Custom Fullscreen Button -->
         <button class="custom-fullscreen" id="fullscreenBtn">
@@ -258,99 +303,109 @@
     const videoWrapper = document.getElementById('videoWrapper');
     const youtubeFrame = document.getElementById('youtubeFrame');
     const fullscreenBtn = document.getElementById('fullscreenBtn');
+    const customPlayBtn = document.getElementById('customPlayBtn');
+    const playerOverlay = document.getElementById('playerOverlay');
+    
+    let isPlaying = false;
+    let playerReady = false;
 
-    // ============ LOADING ============
-    youtubeFrame.addEventListener('load', () => {
-        setTimeout(() => {
-            loadingOverlay.classList.add('hide');
-        }, 500);
+    // ============ YOUTUBE PLAYER API (To'liq nazorat) ============
+    let player;
+    
+    // YouTube API ni yuklash
+    function loadYouTubeAPI() {
+        const tag = document.createElement('script');
+        tag.src = 'https://www.youtube.com/iframe_api';
+        const firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+    }
+    
+    window.onYouTubeIframeAPIReady = function() {
+        player = new YT.Player('youtubeFrame', {
+            events: {
+                'onReady': onPlayerReady,
+                'onStateChange': onPlayerStateChange
+            }
+        });
+    };
+    
+    function onPlayerReady(event) {
+        playerReady = true;
+        loadingOverlay.classList.add('hide');
+        // Avtomatik o'ynatish
+        player.playVideo();
+        isPlaying = true;
+        customPlayBtn.innerHTML = '<i class="fas fa-pause"></i>';
+    }
+    
+    function onPlayerStateChange(event) {
+        if (event.data == YT.PlayerState.PLAYING) {
+            isPlaying = true;
+            customPlayBtn.innerHTML = '<i class="fas fa-pause"></i>';
+        } else if (event.data == YT.PlayerState.PAUSED) {
+            isPlaying = false;
+            customPlayBtn.innerHTML = '<i class="fas fa-play"></i>';
+        } else if (event.data == YT.PlayerState.ENDED) {
+            isPlaying = false;
+            customPlayBtn.innerHTML = '<i class="fas fa-redo-alt"></i>';
+        }
+    }
+    
+    function togglePlay() {
+        if (!playerReady) return;
+        if (isPlaying) {
+            player.pauseVideo();
+        } else {
+            player.playVideo();
+        }
+    }
+    
+    // Custom Play button
+    customPlayBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        togglePlay();
     });
     
-    setTimeout(() => {
-        loadingOverlay.classList.add('hide');
-    }, 3000);
-
-    // ============ FULLSCREEN (Telegram Web uchun tuzatilgan) ============
+    // Overlay bosilganda ham play/pause
+    playerOverlay.addEventListener('click', () => {
+        togglePlay();
+    });
+    
+    // ============ FULLSCREEN ============
     function enterFullscreen() {
         const elem = videoWrapper;
-        
-        // Standart fullscreen API
         if (elem.requestFullscreen) {
-            elem.requestFullscreen().catch(err => {
-                console.log('Fullscreen error:', err);
-                fallbackFullscreen();
-            });
-        }
-        else if (elem.webkitRequestFullscreen) {
+            elem.requestFullscreen();
+        } else if (elem.webkitRequestFullscreen) {
             elem.webkitRequestFullscreen();
-        }
-        else if (elem.msRequestFullscreen) {
+        } else if (elem.msRequestFullscreen) {
             elem.msRequestFullscreen();
-        }
-        else {
-            fallbackFullscreen();
+        } else {
+            // Fallback - iframe ni yangi oynada ochish
+            window.open(youtubeFrame.src, '_blank');
         }
     }
     
-    function fallbackFullscreen() {
-        // Telegram web uchun maxsus: iframe ni to'g'ridan-to'g'ri kattalashtirish
-        const iframe = youtubeFrame;
-        
-        // Iframe ni vaqtincha oyna sifatida ochish
-        const currentSrc = iframe.src;
-        
-        // Modal oyna yaratish
-        const modal = document.createElement('div');
-        modal.style.position = 'fixed';
-        modal.style.top = '0';
-        modal.style.left = '0';
-        modal.style.width = '100%';
-        modal.style.height = '100%';
-        modal.style.backgroundColor = '#000';
-        modal.style.zIndex = '9999';
-        modal.style.display = 'flex';
-        modal.style.alignItems = 'center';
-        modal.style.justifyContent = 'center';
-        
-        const newIframe = document.createElement('iframe');
-        newIframe.style.width = '100%';
-        newIframe.style.height = '100%';
-        newIframe.style.border = 'none';
-        newIframe.src = currentSrc;
-        newIframe.allow = 'accelerometer; autoplay; fullscreen';
-        
-        const closeBtn = document.createElement('button');
-        closeBtn.innerHTML = '✕';
-        closeBtn.style.position = 'absolute';
-        closeBtn.style.top = '20px';
-        closeBtn.style.right = '20px';
-        closeBtn.style.background = 'rgba(0,0,0,0.7)';
-        closeBtn.style.color = 'white';
-        closeBtn.style.border = 'none';
-        closeBtn.style.width = '44px';
-        closeBtn.style.height = '44px';
-        closeBtn.style.borderRadius = '50%';
-        closeBtn.style.fontSize = '1.5rem';
-        closeBtn.style.cursor = 'pointer';
-        closeBtn.style.zIndex = '10000';
-        
-        closeBtn.onclick = () => {
-            document.body.removeChild(modal);
-        };
-        
-        modal.appendChild(newIframe);
-        modal.appendChild(closeBtn);
-        document.body.appendChild(modal);
-    }
-    
-    // Fullscreen tugmasi bosilganda
     fullscreenBtn.addEventListener('click', enterFullscreen);
     
     // Double click fullscreen
-    youtubeFrame.addEventListener('dblclick', enterFullscreen);
     videoWrapper.addEventListener('dblclick', enterFullscreen);
     
-    // ============ TELEGRAM WEB DETEKSI ============
+    // ============ LOADING TIMEOUT ============
+    setTimeout(() => {
+        if (!playerReady) {
+            loadingOverlay.classList.add('hide');
+            // Agar YouTube API yuklanmasa, iframe ni to'g'ridan-to'g'ri ko'rsatish
+            if (youtubeFrame) {
+                youtubeFrame.style.pointerEvents = 'auto';
+            }
+        }
+    }, 5000);
+    
+    // ============ YOUTUBE API ni ishga tushirish ============
+    loadYouTubeAPI();
+    
+    // ============ TELEGRAM WEB UCHUN ============
     function isTelegramWeb() {
         const ua = navigator.userAgent || '';
         return ua.includes('Telegram') && !ua.includes('Android') && !ua.includes('iPhone');
@@ -359,27 +414,30 @@
     if (isTelegramWeb()) {
         // Telegram web da fullscreen tugmasini boshqa usul bilan ishlatish
         fullscreenBtn.addEventListener('click', () => {
-            // Iframe src ni vaqtincha o'zgartirib qayta tiklash
-            const src = youtubeFrame.src;
-            youtubeFrame.src = '';
             setTimeout(() => {
-                youtubeFrame.src = src;
+                if (player && player.playVideo) {
+                    player.playVideo();
+                }
             }, 100);
-            setTimeout(() => {
-                fallbackFullscreen();
-            }, 200);
         });
     }
     
-    // ============ YOUTUBE LOGO YASHIRISH QO'SHIMCHA ============
-    // YouTube iframe ga CSS orqali yashirish
-    const style = document.createElement('style');
-    style.textContent = `
-        .youtube-player {
-            pointer-events: auto;
+    // ============ KEYBOARD SHORTCUTS ============
+    document.addEventListener('keydown', (e) => {
+        if (e.code === 'Space') {
+            e.preventDefault();
+            togglePlay();
         }
-    `;
-    document.head.appendChild(style);
+        if (e.code === 'KeyF') {
+            e.preventDefault();
+            enterFullscreen();
+        }
+        if (e.code === 'Escape') {
+            if (document.fullscreenElement) {
+                document.exitFullscreen();
+            }
+        }
+    });
 </script>
 </body>
 </html>
