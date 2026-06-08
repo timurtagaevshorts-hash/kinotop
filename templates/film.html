@@ -2,68 +2,334 @@
 <html lang="uz">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>{{ film.nomi }} | Kinotop</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: #000; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background: #0a0a0a;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            color: #fff;
+        }
+
+        /* Header */
         .header {
-            position: fixed; top: 0; left: 0; right: 0;
-            background: rgba(0,0,0,0.95); padding: 12px 20px;
-            display: flex; justify-content: space-between; align-items: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(20px);
+            padding: 12px 20px;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1.2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-decoration: none;
+        }
+        .back-btn {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 30px;
+            color: white;
+            font-size: 0.85rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: background 0.2s;
+            text-decoration: none;
+        }
+        .back-btn:hover { background: rgba(255,255,255,0.2); }
+
+        /* Main Container */
+        .container {
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding-top: 60px;
+        }
+
+        /* Video Wrapper */
+        .video-wrapper {
+            flex: 1;
+            background: #000;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        /* Fullscreen Button */
+        .fullscreen-btn {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            border: none;
+            color: white;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            font-size: 1.3rem;
+            cursor: pointer;
             z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
         }
-        .header a { color: white; text-decoration: none; font-size: 1.2rem; font-weight: bold; }
-        
-        .container { max-width: 1200px; margin: 0 auto; padding: 70px 15px 30px; }
-        .video-wrapper { background: #000; border-radius: 16px; overflow: hidden; position: relative; }
-        iframe { width: 100%; max-height: 70vh; background: #000; border: none; }
-        
-        .info { background: #1a1a1a; border-radius: 16px; padding: 20px; margin-top: 20px; }
-        .info h1 { color: white; font-size: 1.5rem; margin-bottom: 8px; }
-        .film-code { display: inline-block; background: linear-gradient(135deg, #667eea, #764ba2); padding: 4px 12px; border-radius: 20px; color: white; font-size: 0.8rem; margin-bottom: 15px; }
-        .description { color: #ccc; line-height: 1.5; margin-top: 15px; }
-        .back-btn { display: inline-block; margin-top: 20px; color: #667eea; text-decoration: none; }
-        
-        .platform-badge {
-            position: absolute; top: 10px; right: 10px;
-            background: rgba(0,0,0,0.7); padding: 5px 12px;
-            border-radius: 20px; font-size: 0.7rem; z-index: 10;
+        .fullscreen-btn:active { transform: scale(0.95); background: rgba(102,126,234,0.8); }
+
+        /* Info Section */
+        .info {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
         }
-        
+        .info h1 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #fff, #a8b2ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .film-code {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            padding: 4px 12px;
+            border-radius: 20px;
+            color: white;
+            font-size: 0.75rem;
+            font-weight: 500;
+            margin-bottom: 12px;
+        }
+        .details {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+        .detail {
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+            padding: 8px 12px;
+        }
+        .detail-label {
+            color: rgba(255,255,255,0.5);
+            font-size: 0.7rem;
+            text-transform: uppercase;
+        }
+        .detail-value {
+            color: white;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-top: 2px;
+        }
+        .description {
+            color: rgba(255,255,255,0.7);
+            font-size: 0.85rem;
+            line-height: 1.5;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+
+        /* Loading */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 15px;
+            z-index: 1100;
+            transition: opacity 0.3s;
+        }
+        .loading-overlay.hide { opacity: 0; visibility: hidden; }
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(102,126,234,0.3);
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Responsive */
         @media (max-width: 768px) {
-            .container { padding: 60px 12px 20px; }
-            .info h1 { font-size: 1.2rem; }
+            .info h1 { font-size: 1.1rem; }
+            .fullscreen-btn { width: 42px; height: 42px; font-size: 1.1rem; bottom: 15px; right: 15px; }
         }
     </style>
 </head>
 <body>
 
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">Video yuklanmoqda...</div>
+</div>
+
 <div class="header">
-    <a href="/">🎬 KINOTOP</a>
+    <a href="/" class="logo">
+        <i class="fas fa-film"></i>
+        <span>KINOTOP</span>
+    </a>
+    <a href="/" class="back-btn">
+        <i class="fas fa-arrow-left"></i> Chiqish
+    </a>
 </div>
 
 <div class="container">
     <div class="video-wrapper">
-        <iframe
+        <iframe 
+            id="videoFrame"
             src="{{ film.embed_url }}"
             frameborder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowfullscreen>
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+            allowfullscreen="true"
+            webkitallowfullscreen="true"
+            mozallowfullscreen="true"
+            msallowfullscreen="true">
         </iframe>
-        <div class="platform-badge">
-            🎬 {{ film.platform|upper }}
-        </div>
+        <button class="fullscreen-btn" id="fullscreenBtn">
+            <i class="fas fa-expand"></i>
+        </button>
     </div>
-    
+
     <div class="info">
         <h1>{{ film.nomi }}</h1>
-        <div class="film-code">🔑 Kod: {{ film.kod }}</div>
-        <div class="description">{{ film.tafsilot if film.tafsilot else "Ma'lumot yo'q" }}</div>
-        <a href="/" class="back-btn">← Bosh sahifa</a>
+        <div class="film-code">
+            <i class="fas fa-key"></i> Kod: {{ film.kod }}
+        </div>
+        
+        <div class="details">
+            <div class="detail">
+                <div class="detail-label">Yil</div>
+                <div class="detail-value">{{ film.yil if film.yil else "Noma'lum" }}</div>
+            </div>
+            <div class="detail">
+                <div class="detail-label">Janr</div>
+                <div class="detail-value">{{ film.janr if film.janr else "Noma'lum" }}</div>
+            </div>
+            <div class="detail">
+                <div class="detail-label">Platforma</div>
+                <div class="detail-value">{{ film.platform|upper if film.platform else "URL" }}</div>
+            </div>
+        </div>
+        
+        <div class="description">
+            {{ film.tafsilot if film.tafsilot else "Bu film haqida ma'lumot yo'q." }}
+        </div>
     </div>
 </div>
 
+<script>
+    // Loading
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    const iframe = document.getElementById('videoFrame');
+    const fullscreenBtn = document.getElementById('fullscreenBtn');
+
+    // Iframe yuklanganda loading ni yashirish
+    iframe.addEventListener('load', function() {
+        setTimeout(() => {
+            loadingOverlay.classList.add('hide');
+        }, 500);
+    });
+
+    // Agar 3 sekundda yuklanmasa
+    setTimeout(() => {
+        loadingOverlay.classList.add('hide');
+    }, 3000);
+
+    // ============ FULLSCREEN FIX (TELEGRAM WEB UCHUN) ============
+    function toggleFullscreen() {
+        const elem = document.documentElement;
+        
+        // 1-usul: Iframe fullscreen
+        if (iframe.requestFullscreen) {
+            iframe.requestFullscreen();
+        } 
+        // 2-usul: Webkit
+        else if (iframe.webkitRequestFullscreen) {
+            iframe.webkitRequestFullscreen();
+        }
+        // 3-usul: MS
+        else if (iframe.msRequestFullscreen) {
+            iframe.msRequestFullscreen();
+        }
+        // 4-usul: Body fullscreen
+        else if (elem.requestFullscreen) {
+            elem.requestFullscreen();
+        }
+        // 5-usul: Video element orqali (agar video bo'lsa)
+        else {
+            const video = document.querySelector('video');
+            if (video && video.requestFullscreen) {
+                video.requestFullscreen();
+            } else {
+                // Agar fullscreen ishlamasa, yangi oynada ochish
+                window.open(iframe.src, '_blank');
+            }
+        }
+    }
+
+    fullscreenBtn.addEventListener('click', toggleFullscreen);
+    
+    // Double click fullscreen
+    iframe.addEventListener('dblclick', toggleFullscreen);
+
+    // ============ TELEGRAM WEB UCHUN QO'SHIMCHA ============
+    // Telegram web da fullscreen ishlamasa, tugmaga bosganda yangi oynada ochish
+    let fullscreenAttempts = 0;
+    
+    function checkFullscreenSupport() {
+        if (!document.fullscreenEnabled && !document.webkitFullscreenEnabled) {
+            fullscreenBtn.innerHTML = '<i class="fas fa-external-link-alt"></i>';
+            fullscreenBtn.onclick = () => {
+                window.open(iframe.src, '_blank');
+            };
+        }
+    }
+    
+    setTimeout(checkFullscreenSupport, 1000);
+</script>
 </body>
 </html>
