@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Kinotop | Shorts va kinolar</title>
+    <title>Kinotop | Shorts</title>
     <link rel="manifest" href="/static/manifest.json">
     <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
-    <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#667eea">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -27,7 +26,7 @@
             width: 100%;
         }
 
-        /* ============ PRELOADER ============ */
+        /* PRELOADER */
         .preloader {
             position: fixed;
             top: 0;
@@ -52,11 +51,7 @@
             -webkit-text-fill-color: transparent;
             margin: 20px 0 10px;
         }
-        .preloader-subtitle {
-            color: rgba(255,255,255,0.6);
-            font-size: 0.9rem;
-            margin-bottom: 30px;
-        }
+        .preloader-subtitle { color: rgba(255,255,255,0.6); font-size: 0.9rem; margin-bottom: 30px; }
         .start-btn {
             background: linear-gradient(135deg, #667eea, #764ba2);
             border: none;
@@ -85,7 +80,7 @@
             100% { box-shadow: 0 0 0 0 rgba(102,126,234,0); }
         }
 
-        /* ============ SCROLL INSTRUCTION ============ */
+        /* SCROLL INSTRUCTION */
         .scroll-instruction {
             position: absolute;
             bottom: 150px;
@@ -105,11 +100,7 @@
             margin: 0 auto 10px;
             animation: arrowBounce 1.5s infinite;
         }
-        .scroll-text {
-            color: rgba(255,255,255,0.8);
-            font-size: 0.8rem;
-            letter-spacing: 1px;
-        }
+        .scroll-text { color: rgba(255,255,255,0.8); font-size: 0.8rem; letter-spacing: 1px; }
         @keyframes arrowBounce {
             0%, 100% { transform: rotate(-45deg) translate(0,0); opacity: 0.3; }
             50% { transform: rotate(-45deg) translate(10px,10px); opacity: 1; }
@@ -119,7 +110,7 @@
             50% { opacity: 1; }
         }
 
-        /* ============ SHORTS CONTAINER ============ */
+        /* SHORTS CONTAINER - FAQAT VIDEO */
         .shorts-container {
             position: relative;
             width: 100%;
@@ -143,7 +134,6 @@
             justify-content: center;
             overflow: hidden;
         }
-        .short-video video,
         .short-video iframe {
             width: 100%;
             height: 100%;
@@ -154,33 +144,35 @@
             border: none;
         }
 
+        /* VIDEO INFO - FAQAT NOMI */
         .short-info {
             position: absolute;
-            bottom: 100px;
+            bottom: 80px;
             left: 16px;
             right: 80px;
             z-index: 10;
-            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
-            padding: 20px 15px;
-            border-radius: 15px;
+            background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+            padding: 15px 12px;
+            border-radius: 12px;
         }
         .short-title {
             color: white;
-            font-size: 1rem;
-            font-weight: 700;
-            margin-bottom: 5px;
-            text-shadow: 0 1px 3px rgba(0,0,0,0.5);
-        }
-        .short-desc {
-            color: rgba(255,255,255,0.8);
-            font-size: 0.8rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 3px;
             text-shadow: 0 1px 2px rgba(0,0,0,0.5);
         }
+        .short-desc {
+            color: rgba(255,255,255,0.7);
+            font-size: 0.75rem;
+            text-shadow: 0 1px 1px rgba(0,0,0,0.5);
+        }
 
+        /* O'NG TOMONDAGI TUGMALAR */
         .overlay-buttons {
             position: absolute;
             right: 12px;
-            bottom: 100px;
+            bottom: 80px;
             z-index: 20;
             display: flex;
             flex-direction: column;
@@ -202,22 +194,7 @@
         }
         .overlay-btn:active { transform: scale(0.9); }
 
-        .short-loading {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 40px;
-            height: 40px;
-            border: 3px solid rgba(255,255,255,0.3);
-            border-top-color: #667eea;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            z-index: 15;
-            display: none;
-        }
-        @keyframes spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
-
+        /* LOGO VA ADMIN */
         .logo {
             position: fixed;
             top: 15px;
@@ -266,7 +243,7 @@
             gap: 15px;
         }
 
-        /* ============ CODE INPUT BUTTON ============ */
+        /* KOD KIRITISH TUGMASI */
         .code-btn {
             position: fixed;
             bottom: 20px;
@@ -283,7 +260,6 @@
             z-index: 100;
             border: 1px solid rgba(255,255,255,0.2);
             box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-            transition: all 0.3s ease;
         }
         .code-btn:active { transform: scale(0.98); }
         .code-btn-left { display: flex; align-items: center; gap: 15px; }
@@ -297,25 +273,15 @@
             justify-content: center;
             font-size: 1.3rem;
         }
-        .code-btn-text h4 {
-            color: white;
-            font-size: 1rem;
-            font-weight: 700;
-            margin-bottom: 2px;
-        }
+        .code-btn-text h4 { color: white; font-size: 1rem; font-weight: 700; margin-bottom: 2px; }
         .code-btn-text p { color: rgba(255,255,255,0.7); font-size: 0.7rem; }
-        .code-btn-arrow {
-            color: white;
-            font-size: 1.2rem;
-            opacity: 0.8;
-            animation: bounceArrow 1.5s infinite;
-        }
+        .code-btn-arrow { color: white; font-size: 1.2rem; opacity: 0.8; animation: bounceArrow 1.5s infinite; }
         @keyframes bounceArrow {
             0%, 100% { transform: translateY(0); }
             50% { transform: translateY(5px); }
         }
 
-        /* ============ MODAL (Raqamli klaviatura) ============ */
+        /* MODAL (KLAVIATURA) */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -328,11 +294,8 @@
             display: none;
             align-items: center;
             justify-content: center;
-            animation: fadeIn 0.3s ease;
         }
         .modal-overlay.show { display: flex; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
         .modal-container {
             width: 90%;
             max-width: 380px;
@@ -341,13 +304,7 @@
             border-radius: 40px;
             overflow: hidden;
             border: 1px solid rgba(255,255,255,0.2);
-            animation: slideUp 0.3s ease;
         }
-        @keyframes slideUp {
-            from { transform: translateY(50px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-
         .modal-header {
             padding: 25px 20px;
             text-align: center;
@@ -370,13 +327,8 @@
             letter-spacing: 15px;
             color: white;
             font-family: monospace;
-            text-shadow: 0 0 10px rgba(102,126,234,0.5);
         }
-        .code-hint {
-            font-size: 0.7rem;
-            color: rgba(255,255,255,0.5);
-            margin-top: 10px;
-        }
+        .code-hint { font-size: 0.7rem; color: rgba(255,255,255,0.5); margin-top: 10px; }
 
         .numpad {
             padding: 0 20px 20px;
@@ -394,17 +346,9 @@
             color: white;
             text-align: center;
             cursor: pointer;
-            transition: all 0.2s;
         }
-        .numpad-btn:active {
-            background: #667eea;
-            transform: scale(0.95);
-        }
-        .numpad-empty {
-            background: transparent;
-            border: none;
-            pointer-events: none;
-        }
+        .numpad-btn:active { background: #667eea; transform: scale(0.95); }
+        .numpad-empty { background: transparent; border: none; pointer-events: none; }
 
         .action-buttons {
             display: grid;
@@ -422,7 +366,6 @@
             font-weight: 600;
             cursor: pointer;
         }
-        .action-clear:active { background: #dc3545; transform: scale(0.95); }
         .action-delete {
             background: rgba(255,193,7,0.8);
             border: none;
@@ -433,8 +376,6 @@
             font-weight: 600;
             cursor: pointer;
         }
-        .action-delete:active { background: #ffc107; transform: scale(0.95); }
-
         .watch-submit {
             width: calc(100% - 40px);
             margin: 0 20px 25px;
@@ -447,8 +388,6 @@
             font-weight: 600;
             cursor: pointer;
         }
-        .watch-submit:active { transform: scale(0.98); }
-
         .modal-close {
             position: absolute;
             top: 20px;
@@ -464,7 +403,6 @@
             font-size: 1.2rem;
             cursor: pointer;
             z-index: 210;
-            backdrop-filter: blur(5px);
         }
 
         .film-loading {
@@ -482,7 +420,6 @@
             gap: 20px;
             visibility: hidden;
             opacity: 0;
-            transition: all 0.3s;
         }
         .film-loading.show { visibility: visible; opacity: 1; }
         .film-loading-spinner {
@@ -522,20 +459,21 @@
 <div class="logo"><span>🎬 KINOTOP</span></div>
 <a href="/admin" class="admin-btn">🔐</a>
 
-<!-- SHORTS CONTAINER -->
+<!-- SHORTS CONTAINER - FAQAT VIDEO, PROFIL YO'Q -->
 <div class="shorts-container" id="shortsContainer" style="display: none;">
     {% if shorts %}
         {% for short in shorts %}
         <div class="short-video" data-id="{{ short.id }}" data-index="{{ loop.index0 }}">
-            {% if short.platform == 'youtube' %}
+            <!-- VIDEO IFRAME -->
             <iframe src="{{ short.embed_url }}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-            {% else %}
-            <iframe src="{{ short.embed_url }}" allowfullscreen></iframe>
-            {% endif %}
+            
+            <!-- VIDEO NOMI (FAQAT MATN, PROFIL YO'Q) -->
             <div class="short-info">
                 <div class="short-title">{{ short.sarlavha }}</div>
-                <div class="short-desc">{{ short.tafsilot or 'Qiziqarli video' }}</div>
+                <div class="short-desc">{{ short.tafsilot or '' }}</div>
             </div>
+            
+            <!-- O'NG TOMONDAGI TUGMALAR -->
             <div class="overlay-buttons">
                 <div class="overlay-btn sound-btn" data-id="{{ short.id }}">🔇</div>
                 <div class="overlay-btn like-btn">❤️</div>
@@ -547,7 +485,7 @@
     {% endif %}
 </div>
 
-<!-- CODE BUTTON -->
+<!-- KOD KIRITISH TUGMASI -->
 <div class="code-btn" id="openModalBtn">
     <div class="code-btn-left">
         <div class="code-btn-icon"><i class="fas fa-film"></i></div>
@@ -571,7 +509,7 @@
             <div class="code-digits" id="codeDisplay">____</div>
             <div class="code-hint">4 xonali kod</div>
         </div>
-        <div class="numpad" id="numpad">
+        <div class="numpad">
             <div class="numpad-btn" data-value="1">1</div>
             <div class="numpad-btn" data-value="2">2</div>
             <div class="numpad-btn" data-value="3">3</div>
@@ -599,7 +537,7 @@
 </div>
 
 <script>
-    // ============ PRELOADER ============
+    // PRELOADER
     const preloader = document.getElementById('preloader');
     const startBtn = document.getElementById('startBtn');
     const shortsContainer = document.getElementById('shortsContainer');
@@ -614,9 +552,8 @@
         setTimeout(() => { if (allVideos.length > 0) playVideo(0); }, 300);
     });
 
-    // ============ SHORTS PLAYER ============
+    // SHORTS PLAYER
     let currentIndex = 0;
-    let currentVideo = null;
 
     function getAllVideos() {
         allVideos = Array.from(document.querySelectorAll('.short-video'));
@@ -626,20 +563,18 @@
         allVideos.forEach((item, i) => {
             const iframe = item.querySelector('iframe');
             const soundBtn = item.querySelector('.sound-btn');
-            if (iframe) {
-                // Iframe-ni to'xtatish
+            if (iframe && i !== index) {
                 iframe.src = iframe.src;
             }
-            if (soundBtn) soundBtn.innerHTML = '🔇';
+            if (soundBtn && i !== index) soundBtn.innerHTML = '🔇';
         });
         if (allVideos[index]) {
             const iframe = allVideos[index].querySelector('iframe');
             const soundBtn = allVideos[index].querySelector('.sound-btn');
-            if (iframe && soundBtn) {
-                // Iframe-ni o'ynatish (ovoz bilan)
+            if (iframe) {
                 iframe.src = iframe.src.replace('autoplay=0', 'autoplay=1');
-                soundBtn.innerHTML = '🔊';
             }
+            if (soundBtn) soundBtn.innerHTML = '🔊';
             currentIndex = index;
         }
     }
@@ -663,12 +598,12 @@
         const parent = btn.closest('.short-video');
         const iframe = parent.querySelector('iframe');
         if (iframe) {
-            const currentSrc = iframe.src;
-            if (currentSrc.includes('autoplay=1')) {
-                iframe.src = currentSrc.replace('autoplay=1', 'autoplay=0');
+            const src = iframe.src;
+            if (src.includes('autoplay=1')) {
+                iframe.src = src.replace('autoplay=1', 'autoplay=0');
                 btn.innerHTML = '🔇';
             } else {
-                iframe.src = currentSrc.replace('autoplay=0', 'autoplay=1');
+                iframe.src = src.replace('autoplay=0', 'autoplay=1');
                 btn.innerHTML = '🔊';
             }
         }
@@ -681,7 +616,7 @@
         setTimeout(() => btn.innerHTML = '❤️', 1000);
     }
 
-    // ============ 4 XONALI KOD KIRITISH ============
+    // KOD KIRITISH
     let currentCode = '';
     const maxCodeLength = 4;
     const codeDisplay = document.getElementById('codeDisplay');
@@ -695,7 +630,7 @@
 
     function updateDisplay() {
         codeDisplay.textContent = currentCode.padEnd(maxCodeLength, '_');
-        if (currentCode.length === maxCodeLength) { submitCode(); }
+        if (currentCode.length === maxCodeLength) submitCode();
     }
 
     function addDigit(d) {
@@ -712,8 +647,8 @@
         fetch(`/api/check/${kod}`)
             .then(res => res.json())
             .then(data => {
-                if (data.exists) { window.location.href = `/film/${kod}`; }
-                else { throw new Error('NOT_FOUND'); }
+                if (data.exists) window.location.href = `/film/${kod}`;
+                else throw new Error('NOT_FOUND');
             })
             .catch(() => {
                 filmLoading.classList.remove('show');
@@ -724,21 +659,17 @@
 
     document.querySelectorAll('.numpad-btn').forEach(btn => {
         const val = btn.getAttribute('data-value');
-        if (val && val.trim() !== '') { btn.addEventListener('click', () => addDigit(val)); }
+        if (val && val.trim() !== '') btn.addEventListener('click', () => addDigit(val));
     });
     clearBtn.addEventListener('click', clearCode);
     backspaceBtn.addEventListener('click', backspace);
     watchSubmitBtn.addEventListener('click', submitCode);
 
-    openModalBtn.addEventListener('click', () => {
-        modalOverlay.classList.add('show');
-        clearCode();
-    });
-    function closeModal() { modalOverlay.classList.remove('show'); clearCode(); }
-    closeModalBtn.addEventListener('click', closeModal);
-    modalOverlay.addEventListener('click', (e) => { if (e.target === modalOverlay) closeModal(); });
+    openModalBtn.addEventListener('click', () => { modalOverlay.classList.add('show'); clearCode(); });
+    closeModalBtn.addEventListener('click', () => { modalOverlay.classList.remove('show'); clearCode(); });
+    modalOverlay.addEventListener('click', (e) => { if (e.target === modalOverlay) { modalOverlay.classList.remove('show'); clearCode(); } });
 
-    // ============ INITIALIZATION ============
+    // INIT
     window.addEventListener('load', () => {
         document.querySelectorAll('.sound-btn').forEach(btn => {
             btn.addEventListener('click', (e) => { e.stopPropagation(); toggleSound(btn); });
@@ -746,13 +677,6 @@
         document.querySelectorAll('.like-btn').forEach(btn => {
             btn.addEventListener('click', (e) => { e.stopPropagation(); likeVideo(btn); });
         });
-    });
-
-    document.addEventListener('visibilitychange', () => {
-        if (document.hidden && currentVideo) currentVideo.pause();
-        else if (!document.hidden && currentVideo && currentVideo.paused && shortsContainer.style.display === 'block') {
-            currentVideo.play().catch(e => console.log());
-        }
     });
 </script>
 </body>
