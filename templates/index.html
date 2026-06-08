@@ -138,6 +138,16 @@
             position: absolute;
             top: 0;
             left: 0;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .short-video iframe.active {
+            opacity: 1;
+            z-index: 5;
+        }
+        .short-video iframe.inactive {
+            opacity: 0;
+            z-index: 1;
         }
 
         .short-info {
@@ -186,6 +196,7 @@
             font-size: 1.1rem;
             cursor: pointer;
             transition: transform 0.2s;
+            z-index: 30;
         }
         .overlay-btn:active { transform: scale(0.9); }
 
@@ -489,9 +500,10 @@
 </div>
 
 <script>
-    // ============ ORIGINAL SHORTS DATA ============
+    // ============ ORIGINAL SHORTS DATA (SERVERDAN) ============
     const originalShorts = {{ shorts | tojson | safe }};
     
+    // Random tartib - har safar saytga kirganda yangi tartib
     function shuffleArray(arr) {
         for (let i = arr.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
@@ -518,13 +530,13 @@
             div.setAttribute('data-id', short.id);
             div.setAttribute('data-index', idx);
             div.innerHTML = `
-                <iframe class="hidden-iframe" data-src="${short.embed_url}?autoplay=0&mute=0&controls=0&modestbranding=1&showinfo=0&rel=0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                <iframe data-src="${short.embed_url}?autoplay=0&mute=0&controls=0&modestbranding=1&showinfo=0&rel=0&playsinline=1" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
                 <div class="short-info">
                     <div class="short-title">${escapeHtml(short.sarlavha)}</div>
                     <div class="short-desc">${escapeHtml(short.tafsilot || '')}</div>
                 </div>
                 <div class="overlay-buttons">
-                    <div class="overlay-btn sound-btn" data-id="${short.id}">🔊</div>
+                    <div class="overlay-btn sound-btn" data-id="${short.id}">🔇</div>
                     <div class="overlay-btn like-btn">❤️</div>
                 </div>
             `;
@@ -546,59 +558,50 @@
         setTimeout(() => { if (allVideos.length > 0) initFirstVideo(); }, 300);
     });
     
-    // ============ QATTIY VIDEO PLAYER (FAQAT BITTASI OVoz bilan) ============
+    // ============ QATTIY VIDEO PLAYER - FAQAT KO'RINAYOTGANI O'YNAYDI ============
     let allVideos = [];
-    let currentIndex = 0;
+    let currentIndex = -1;
     let currentIframe = null;
+    let scrollTimer = null;
+    let isScrolling = false;
     
     function getAllVideos() {
         allVideos = Array.from(document.querySelectorAll('.short-video'));
     }
     
-    // BARCHA VIDEOLARNI TO'XTATISH VA OVOZINI O'CHIRISH
-    function stopAllAndMute() {
-        allVideos.forEach((item, i) => {
+    // BARCHA VIDEOLARNI TO'LIQ TO'XTATISH
+    function stopAllVideos() {
+        allVideos.forEach((item) => {
             const iframe = item.querySelector('iframe');
-            const soundBtn = item.querySelector('.sound-btn');
             if (iframe && iframe.contentWindow) {
                 iframe.contentWindow.postMessage('{"event":"command","func":"stopVideo","args":""}', '*');
                 iframe.contentWindow.postMessage('{"event":"command","func":"mute","args":""}', '*');
-            }
-            if (soundBtn) {
-                soundBtn.innerHTML = '🔇';
             }
         });
     }
     
-    // FAQAT KO'RINAYOTGAN VIDEONI O'YNATISH (OVOZ BILAN)
-    function playOnlyCurrentVideo(index) {
-        if (index >= allVideos.length || index < 0) return;
+    // FAQAT BERILGAN INDEKSDAGI VIDEONI O'YNATISH
+    function playVideoAt(index) {
+        if (index === currentIndex) return;
+        if (index < 0 || index >= allVideos.length) return;
         
-        // AVVAL BARCHASINI TO'XTAT
-        allVideos.forEach((item, i) => {
-            const iframe = item.querySelector('iframe');
-            const soundBtn = item.querySelector('.sound-btn');
-            if (iframe && iframe.contentWindow) {
-                iframe.contentWindow.postMessage('{"event":"command","func":"stopVideo","args":""}', '*');
-                iframe.contentWindow.postMessage('{"event":"command","func":"mute","args":""}', '*');
-            }
-            if (soundBtn) {
-                soundBtn.innerHTML = '🔇';
-            }
-        });
+        // Oldingi videoni to'xtatish
+        if (currentIframe && currentIframe.contentWindow) {
+            currentIframe.contentWindow.postMessage('{"event":"command","func":"stopVideo","args":""}', '*');
+            currentIframe.contentWindow.postMessage('{"event":"command","func":"mute","args":""}', '*');
+        }
         
-        // HOZIRGI VIDEONI O'YNAT
-        const currentItem = allVideos[index];
-        if (!currentItem) return;
+        // Yangi videoni o'ynatish
+        const newItem = allVideos[index];
+        if (!newItem) return;
         
-        const iframe = currentItem.querySelector('iframe');
-        const soundBtn = currentItem.querySelector('.sound-btn');
-        const originalSrc = iframe.getAttribute('data-src');
+        const newIframe = newItem.querySelector('iframe');
+        const soundBtn = newItem.querySelector('.sound-btn');
+        const originalSrc = newIframe.getAttribute('data-src');
         
-        if (iframe && originalSrc) {
-            iframe.classList.remove('hidden-iframe');
-            iframe.src = originalSrc + '&autoplay=1&mute=0';
-            iframe.style.display = 'block';
+        if (newIframe && originalSrc) {
+            newIframe.src = originalSrc + '&autoplay=1&mute=0';
+            currentIframe = newIframe;
         }
         
         if (soundBtn) {
@@ -606,45 +609,71 @@
         }
         
         currentIndex = index;
-        currentIframe = iframe;
+    }
+    
+    function stopCurrentVideo() {
+        if (currentIframe && currentIframe.contentWindow) {
+            currentIframe.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
+            currentIframe.contentWindow.postMessage('{"event":"command","func":"mute","args":""}', '*');
+        }
     }
     
     function initFirstVideo() {
         if (allVideos.length > 0) {
-            playOnlyCurrentVideo(0);
+            playVideoAt(0);
         }
     }
     
-    function getCurrentIndex() {
-        return Math.round(shortsContainer.scrollTop / window.innerHeight);
+    function getCurrentVisibleIndex() {
+        const scrollTop = shortsContainer.scrollTop;
+        const itemHeight = window.innerHeight;
+        const rawIndex = scrollTop / itemHeight;
+        const roundedIndex = Math.round(rawIndex);
+        return Math.min(Math.max(0, roundedIndex), allVideos.length - 1);
     }
     
-    // SCROLL EVENT
-    let scrollTimeout;
-    shortsContainer.addEventListener('scroll', () => {
-        if (scrollTimeout) clearTimeout(scrollTimeout);
-        scrollTimeout = setTimeout(() => {
-            const newIndex = getCurrentIndex();
-            if (newIndex !== currentIndex && newIndex >= 0 && newIndex < allVideos.length) {
-                playOnlyCurrentVideo(newIndex);
+    // Scroll handler - optimallashtirilgan
+    function onScroll() {
+        if (scrollTimer) clearTimeout(scrollTimer);
+        
+        if (!isScrolling) {
+            isScrolling = true;
+            // Scroll boshlanganda joriy videoni to'xtatish
+            stopCurrentVideo();
+        }
+        
+        scrollTimer = setTimeout(() => {
+            const newIndex = getCurrentVisibleIndex();
+            if (newIndex !== currentIndex) {
+                playVideoAt(newIndex);
             }
-        }, 30);
+            isScrolling = false;
+        }, 80);
+    }
+    
+    shortsContainer.addEventListener('scroll', onScroll);
+    
+    // Touch support bilan optimallashtirish
+    let touchStartY = 0;
+    let touchEndY = 0;
+    
+    shortsContainer.addEventListener('touchstart', (e) => {
+        touchStartY = e.touches[0].clientY;
     });
     
-    // TOUCH SUPPORT
-    let touchStart = 0;
-    shortsContainer.addEventListener('touchstart', (e) => {
-        touchStart = e.touches[0].clientY;
-    });
     shortsContainer.addEventListener('touchend', (e) => {
-        const touchEnd = e.changedTouches[0].clientY;
-        if (Math.abs(touchStart - touchEnd) > 30) {
+        touchEndY = e.changedTouches[0].clientY;
+        const diff = touchStartY - touchEndY;
+        
+        if (Math.abs(diff) > 30) {
+            if (scrollTimer) clearTimeout(scrollTimer);
             setTimeout(() => {
-                const newIndex = getCurrentIndex();
-                if (newIndex !== currentIndex && newIndex >= 0 && newIndex < allVideos.length) {
-                    playOnlyCurrentVideo(newIndex);
+                const newIndex = getCurrentVisibleIndex();
+                if (newIndex !== currentIndex) {
+                    playVideoAt(newIndex);
                 }
-            }, 50);
+                isScrolling = false;
+            }, 100);
         }
     });
     
@@ -666,8 +695,7 @@
                 }
             }
         } else {
-            // Boshqa videoga o'tish va uning ovozini yoqish
-            playOnlyCurrentVideo(idx);
+            playVideoAt(idx);
         }
     }
     
@@ -747,8 +775,6 @@
     document.addEventListener('visibilitychange', () => {
         if (document.hidden && currentIframe && currentIframe.contentWindow) {
             currentIframe.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
-        } else if (!document.hidden && currentIframe && currentIframe.contentWindow) {
-            currentIframe.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
         }
     });
 </script>
