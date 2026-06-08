@@ -14,7 +14,7 @@ UPLOAD_FOLDER_SHORTS = os.path.join(BASE_DIR, 'static/uploads/shorts')
 os.makedirs(UPLOAD_FOLDER_FILMS, exist_ok=True)
 os.makedirs(UPLOAD_FOLDER_SHORTS, exist_ok=True)
 
-ADMIN_PASSWORD = 'admin123'
+ADMIN_PASSWORD = 'Betmilion1'
 ALLOWED_VIDEO = {'mp4', 'avi', 'mkv', 'mov', 'webm'}
 ALLOWED_IMAGE = {'png', 'jpg', 'jpeg', 'gif'}
 
