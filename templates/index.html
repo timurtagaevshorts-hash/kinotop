@@ -3,9 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Kinotop | Shorts</title>
+    <title>Kinotop | Shorts va kinolar</title>
+    
+    <!-- PWA Meta Tags -->
     <link rel="manifest" href="/static/manifest.json">
-    <meta name="theme-color" content="#000000">
+    <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#667eea">
+    <meta name="mobile-web-app-capable" content="yes">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
     <style>
         * {
             margin: 0;
@@ -16,13 +26,14 @@
 
         body {
             background: #000;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             overflow: hidden;
             height: 100vh;
-            width: 100%;
             position: fixed;
+            width: 100%;
         }
 
-        /* PRELOADER */
+        /* ============ PRELOADER ============ */
         .preloader {
             position: fixed;
             top: 0;
@@ -34,7 +45,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: opacity 0.5s;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
         }
 
         .preloader.hide {
@@ -48,29 +59,40 @@
         }
 
         .preloader-logo {
-            font-size: 5rem;
+            font-size: 4rem;
             animation: bounce 1s ease infinite;
         }
 
         .preloader-title {
-            font-size: 2.5rem;
+            font-size: 2rem;
             font-weight: 800;
             background: linear-gradient(135deg, #fff, #a8b2ff);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            margin: 20px 0;
+            margin: 20px 0 10px;
+        }
+
+        .preloader-subtitle {
+            color: rgba(255,255,255,0.6);
+            font-size: 0.9rem;
+            margin-bottom: 30px;
         }
 
         .start-btn {
             background: linear-gradient(135deg, #667eea, #764ba2);
             border: none;
-            padding: 15px 40px;
+            padding: 14px 40px;
             border-radius: 50px;
             color: white;
-            font-size: 1.1rem;
+            font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
-            margin-top: 20px;
+            transition: transform 0.3s, box-shadow 0.3s;
+            animation: pulse 1.5s infinite;
+        }
+
+        .start-btn:active {
+            transform: scale(0.95);
         }
 
         @keyframes fadeInUp {
@@ -83,7 +105,55 @@
             50% { transform: translateY(-15px); }
         }
 
-        /* SHORTS CONTAINER */
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(102,126,234,0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(102,126,234,0); }
+            100% { box-shadow: 0 0 0 0 rgba(102,126,234,0); }
+        }
+
+        /* ============ SCROLL INSTRUCTION ANIMATION ============ */
+        .scroll-instruction {
+            position: absolute;
+            bottom: 180px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            z-index: 50;
+            animation: fadeInOut 2s infinite;
+        }
+
+        .scroll-instruction.hide {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .scroll-arrow {
+            width: 30px;
+            height: 30px;
+            border-left: 2px solid white;
+            border-bottom: 2px solid white;
+            transform: rotate(-45deg);
+            margin: 0 auto 10px;
+            animation: arrowBounce 1.5s infinite;
+        }
+
+        .scroll-text {
+            color: rgba(255,255,255,0.8);
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+        }
+
+        @keyframes arrowBounce {
+            0%, 100% { transform: rotate(-45deg) translate(0, 0); opacity: 0.3; }
+            50% { transform: rotate(-45deg) translate(10px, 10px); opacity: 1; }
+        }
+
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        /* ============ SHORTS CONTAINER ============ */
         .shorts-container {
             position: relative;
             width: 100%;
@@ -95,7 +165,9 @@
             -webkit-overflow-scrolling: touch;
         }
 
-        .shorts-container::-webkit-scrollbar { display: none; }
+        .shorts-container::-webkit-scrollbar {
+            display: none;
+        }
 
         .short-video {
             position: relative;
@@ -106,12 +178,16 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            overflow: hidden;
         }
 
         .short-video video {
             width: 100%;
             height: 100%;
             object-fit: cover;
+            position: absolute;
+            top: 0;
+            left: 0;
         }
 
         .short-info {
@@ -120,21 +196,23 @@
             left: 16px;
             right: 80px;
             z-index: 10;
-            background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
             padding: 20px 15px;
             border-radius: 15px;
         }
 
         .short-title {
             color: white;
-            font-size: 1rem;
-            font-weight: 600;
+            font-size: 1.1rem;
+            font-weight: 700;
             margin-bottom: 5px;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.5);
         }
 
         .short-desc {
             color: rgba(255,255,255,0.8);
-            font-size: 0.8rem;
+            font-size: 0.85rem;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
         }
 
         .overlay-buttons {
@@ -150,8 +228,8 @@
         .overlay-btn {
             background: rgba(0,0,0,0.5);
             backdrop-filter: blur(8px);
-            width: 42px;
-            height: 42px;
+            width: 44px;
+            height: 44px;
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -159,13 +237,18 @@
             color: white;
             font-size: 1.2rem;
             cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .overlay-btn:active {
+            transform: scale(0.9);
         }
 
         .download-short {
             background: rgba(0,0,0,0.5);
             backdrop-filter: blur(8px);
-            width: 42px;
-            height: 42px;
+            width: 44px;
+            height: 44px;
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -175,34 +258,151 @@
             cursor: pointer;
         }
 
-        /* CODE BAR */
-        .code-bar {
+        .short-loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            z-index: 15;
+            display: none;
+        }
+
+        @keyframes spin {
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        /* Logo and admin */
+        .logo {
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            z-index: 50;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(10px);
+            padding: 6px 16px;
+            border-radius: 30px;
+            color: white;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        .logo span {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .admin-btn {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            z-index: 50;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(10px);
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-decoration: none;
+            font-size: 1rem;
+        }
+
+        .no-shorts {
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-align: center;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .no-shorts p {
+            font-size: 1rem;
+            opacity: 0.7;
+        }
+
+        /* ============ CODE INPUT BUTTON (PASTDA) ============ */
+        .code-button-container {
             position: fixed;
             bottom: 0;
             left: 0;
             right: 0;
-            background: rgba(0,0,0,0.9);
-            border-top: 1px solid rgba(255,255,255,0.1);
             z-index: 100;
+            padding: 12px 20px 20px;
+            background: linear-gradient(to top, rgba(0,0,0,0.95), transparent);
         }
 
-        .code-button {
+        .code-btn {
             width: 100%;
-            padding: 16px 20px;
-            background: transparent;
+            background: linear-gradient(135deg, #667eea, #764ba2);
             border: none;
+            border-radius: 60px;
+            padding: 16px 20px;
             display: flex;
             align-items: center;
             justify-content: space-between;
             cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 15px rgba(102,126,234,0.3);
         }
 
-        .code-button-left { display: flex; align-items: center; gap: 12px; }
-        .code-icon { background: linear-gradient(135deg, #667eea, #764ba2); width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; }
-        .code-text h4 { color: white; font-size: 0.95rem; font-weight: 600; }
-        .code-text p { color: rgba(255,255,255,0.5); font-size: 0.7rem; }
+        .code-btn:active {
+            transform: scale(0.98);
+        }
 
-        /* MODAL */
+        .code-btn-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .code-btn-icon {
+            width: 48px;
+            height: 48px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+        }
+
+        .code-btn-text {
+            text-align: left;
+        }
+
+        .code-btn-text h4 {
+            color: white;
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+
+        .code-btn-text p {
+            color: rgba(255,255,255,0.7);
+            font-size: 0.75rem;
+        }
+
+        .code-btn-arrow {
+            color: white;
+            font-size: 1.2rem;
+            opacity: 0.8;
+        }
+
+        /* ============ MODAL (KOD KIRITISH OYNASI) ============ */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -214,83 +414,94 @@
             display: none;
             align-items: center;
             justify-content: center;
+            backdrop-filter: blur(10px);
         }
 
-        .modal-overlay.show { display: flex; }
+        .modal-overlay.show {
+            display: flex;
+        }
 
         .modal-container {
             width: 90%;
             max-width: 400px;
             background: #1a1a2e;
-            border-radius: 20px;
+            border-radius: 28px;
             overflow: hidden;
+            border: 1px solid rgba(102,126,234,0.3);
         }
 
         .modal-header {
-            padding: 20px;
+            padding: 25px 20px;
             background: linear-gradient(135deg, #667eea, #764ba2);
             text-align: center;
         }
 
-        .modal-header h3 { color: white; font-size: 1.3rem; }
-
-        .modal-body { padding: 25px 20px; }
-
-        .code-display {
-            background: #0f0f1a;
-            border-radius: 12px;
-            padding: 15px;
-            text-align: center;
-            margin-bottom: 20px;
-        }
-
-        .code-display span { font-size: 2rem; letter-spacing: 8px; color: white; font-family: monospace; }
-
-        .numpad {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 12px;
-            margin-bottom: 20px;
-        }
-
-        .numpad-btn {
-            background: #0f0f1a;
-            border: 1px solid rgba(102,126,234,0.3);
-            border-radius: 12px;
-            padding: 18px;
-            font-size: 1.5rem;
+        .modal-header h3 {
             color: white;
+            font-size: 1.3rem;
+            margin-bottom: 5px;
+        }
+
+        .modal-header p {
+            color: rgba(255,255,255,0.8);
+            font-size: 0.8rem;
+        }
+
+        .modal-body {
+            padding: 25px 20px;
+        }
+
+        .code-input-group {
+            margin-bottom: 25px;
+        }
+
+        .code-input-label {
+            color: rgba(255,255,255,0.6);
+            font-size: 0.8rem;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .code-input-field {
+            width: 100%;
+            padding: 16px;
+            background: #0f0f1a;
+            border: 2px solid rgba(102,126,234,0.3);
+            border-radius: 16px;
+            color: white;
+            font-size: 1.2rem;
             text-align: center;
-            cursor: pointer;
+            letter-spacing: 4px;
+            font-family: monospace;
+            outline: none;
+            transition: all 0.3s;
         }
 
-        .numpad-actions {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            margin-bottom: 15px;
+        .code-input-field:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 10px rgba(102,126,234,0.3);
         }
 
-        .action-btn {
-            padding: 14px;
-            border-radius: 12px;
-            text-align: center;
-            cursor: pointer;
-            font-weight: 600;
+        .code-input-field::placeholder {
+            color: rgba(255,255,255,0.3);
+            letter-spacing: 0;
         }
-
-        .action-btn.clear { background: #dc3545; color: white; }
-        .action-btn.backspace { background: #ffc107; color: #333; }
 
         .watch-submit {
             width: 100%;
             padding: 16px;
             background: linear-gradient(135deg, #667eea, #764ba2);
             border: none;
-            border-radius: 12px;
+            border-radius: 50px;
             color: white;
+            font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .watch-submit:active {
+            transform: scale(0.98);
         }
 
         .film-loading {
@@ -299,7 +510,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.9);
+            background: rgba(0,0,0,0.95);
             z-index: 300;
             display: flex;
             align-items: center;
@@ -325,66 +536,70 @@
             animation: spin 0.8s linear infinite;
         }
 
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        .logo {
-            position: fixed;
-            top: 15px;
-            left: 15px;
-            z-index: 50;
-            background: rgba(0,0,0,0.5);
-            backdrop-filter: blur(10px);
-            padding: 6px 16px;
-            border-radius: 30px;
+        .film-loading-text {
             color: white;
-            font-weight: bold;
-            font-size: 0.9rem;
+            font-size: 1rem;
         }
 
-        .admin-btn {
-            position: fixed;
-            top: 15px;
-            right: 15px;
-            z-index: 50;
-            background: rgba(0,0,0,0.5);
-            backdrop-filter: blur(10px);
-            width: 38px;
-            height: 38px;
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.2);
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
-            text-decoration: none;
-            font-size: 1rem;
+            font-size: 1.2rem;
+            cursor: pointer;
+            z-index: 210;
+            backdrop-filter: blur(5px);
+        }
+
+        @media (max-width: 768px) {
+            .code-btn { padding: 12px 16px; }
+            .code-btn-icon { width: 40px; height: 40px; font-size: 1rem; }
+            .code-btn-text h4 { font-size: 0.85rem; }
+            .code-btn-text p { font-size: 0.65rem; }
         }
     </style>
 </head>
 <body>
 
+<!-- PRELOADER -->
 <div class="preloader" id="preloader">
     <div class="preloader-content">
         <div class="preloader-logo">🎬</div>
         <div class="preloader-title">KINOTOP</div>
-        <button class="start-btn" id="startBtn">🎥 Boshlash</button>
+        <div class="preloader-subtitle">Eng yangi va qiziqarli shortslar</div>
+        <button class="start-btn" id="startBtn">🎥 Kirish</button>
     </div>
 </div>
 
-<div class="film-loading" id="filmLoading">
-    <div class="film-loading-spinner"></div>
-    <div style="color: white;">Kino qidirilmoqda...</div>
+<!-- SCROLL INSTRUCTION -->
+<div class="scroll-instruction" id="scrollInstruction">
+    <div class="scroll-arrow"></div>
+    <div class="scroll-text">👆 Shortslarni ko'rish uchun yuqoriga suring</div>
 </div>
 
-<div class="logo">🎬 KINOTOP</div>
+<div class="logo">
+    <span>🎬 KINOTOP</span>
+</div>
+
 <a href="/admin" class="admin-btn">🔐</a>
 
+<!-- SHORTS CONTAINER -->
 <div class="shorts-container" id="shortsContainer" style="display: none;">
     {% if shorts %}
         {% for short in shorts %}
-        <div class="short-video" data-id="{{ short.id }}">
+        <div class="short-video" data-id="{{ short.id }}" data-index="{{ loop.index0 }}">
             <video preload="auto" playsinline muted loop>
                 <source src="/stream-shorts/{{ short.id }}" type="video/mp4">
             </video>
+            <div class="short-loading" id="loading-{{ short.id }}"></div>
             <div class="short-info">
                 <div class="short-title">{{ short.sarlavha }}</div>
                 <div class="short-desc">{{ short.tafsilot or 'Qiziqarli video' }}</div>
@@ -397,96 +612,110 @@
         </div>
         {% endfor %}
     {% else %}
-        <div style="color:white; display:flex; align-items:center; justify-content:center; height:100vh;">
-            <p>📱 Hozircha shorts yo'q</p>
+        <div class="no-shorts">
+            <p>📱 Hozircha shortslar yo'q</p>
+            <p style="font-size: 0.8rem;">Admin panel orqali video qo'shing</p>
         </div>
     {% endif %}
 </div>
 
-<div class="code-bar" id="codeBar">
-    <button class="code-button" id="openModalBtn">
-        <div class="code-button-left">
-            <div class="code-icon">🎬</div>
-            <div class="code-text">
-                <h4> BU YERNI BOS va film ko'ring </h4>
-                <p>Top kinolar</p>
+<!-- CODE INPUT BUTTON (PASTDA) -->
+<div class="code-button-container" id="codeButtonContainer">
+    <button class="code-btn" id="openModalBtn">
+        <div class="code-btn-left">
+            <div class="code-btn-icon">
+                <i class="fas fa-film"></i>
+            </div>
+            <div class="code-btn-text">
+                <h4>🎬 Film kodini kiriting</h4>
+                <p>4 xonali kod orqali film tomosha qiling</p>
             </div>
         </div>
-        <div class="code-arrow">▲</div>
+        <div class="code-btn-arrow">
+            <i class="fas fa-chevron-up"></i>
+        </div>
     </button>
 </div>
 
+<!-- MODAL (KOD KIRITISH OYNASI) -->
 <div class="modal-overlay" id="modalOverlay">
+    <div class="modal-close" id="closeModalBtn">
+        <i class="fas fa-times"></i>
+    </div>
     <div class="modal-container">
         <div class="modal-header">
-            <h3>🎬 Film kodi</h3>
+            <h3>🎬 Film kodini kiriting</h3>
+            <p>4 xonali kodni kiriting va tomosha qiling</p>
         </div>
         <div class="modal-body">
-            <div class="code-display">
-                <span id="codeDisplay">____</span>
+            <div class="code-input-group">
+                <label class="code-input-label">Film kodi</label>
+                <input type="text" class="code-input-field" id="filmKod" placeholder="1234" maxlength="4" inputmode="numeric" pattern="[0-9]*">
             </div>
-            <div class="numpad">
-                <div class="numpad-btn" data-value="1">1</div>
-                <div class="numpad-btn" data-value="2">2</div>
-                <div class="numpad-btn" data-value="3">3</div>
-                <div class="numpad-btn" data-value="4">4</div>
-                <div class="numpad-btn" data-value="5">5</div>
-                <div class="numpad-btn" data-value="6">6</div>
-                <div class="numpad-btn" data-value="7">7</div>
-                <div class="numpad-btn" data-value="8">8</div>
-                <div class="numpad-btn" data-value="9">9</div>
-                <div class="numpad-btn" data-value=""></div>
-                <div class="numpad-btn" data-value="0">0</div>
-                <div class="numpad-btn" data-value=""></div>
-            </div>
-            <div class="numpad-actions">
-                <div class="action-btn clear" id="clearBtn">O'chirish</div>
-                <div class="action-btn backspace" id="backspaceBtn">⌫</div>
-            </div>
-            <button class="watch-submit" id="watchSubmitBtn">🎬 Tomosha qilish</button>
+            <button class="watch-submit" id="watchSubmitBtn">
+                <i class="fas fa-play"></i> Tomosha qilish
+            </button>
         </div>
     </div>
 </div>
 
+<div class="film-loading" id="filmLoading">
+    <div class="film-loading-spinner"></div>
+    <div class="film-loading-text">🎬 Kino qidirilmoqda...</div>
+</div>
+
 <script>
-    // PRELOADER
+    // ============ PRELOADER ============
     const preloader = document.getElementById('preloader');
     const startBtn = document.getElementById('startBtn');
     const shortsContainer = document.getElementById('shortsContainer');
-    let allVideos = [];
+    const scrollInstruction = document.getElementById('scrollInstruction');
+    const codeButtonContainer = document.getElementById('codeButtonContainer');
 
     startBtn.addEventListener('click', () => {
         preloader.classList.add('hide');
         shortsContainer.style.display = 'block';
+        codeButtonContainer.style.display = 'block';
+        
+        setTimeout(() => {
+            scrollInstruction.classList.add('hide');
+        }, 4000);
+        
         setTimeout(() => {
             if (allVideos.length > 0) playVideo(0);
-        }, 100);
+        }, 300);
     });
+
+    // ============ SHORTS PLAYER ============
+    let allVideos = [];
+    let currentIndex = 0;
+    let currentVideo = null;
 
     function getAllVideos() {
         allVideos = Array.from(document.querySelectorAll('.short-video'));
     }
 
-    let currentIndex = 0;
-    let currentVideo = null;
-
     function playVideo(index) {
         allVideos.forEach((item, i) => {
             const video = item.querySelector('video');
-            video.pause();
-            video.muted = true;
-            if (i === index) {
-                video.muted = false;
-                video.play().catch(e => console.log());
-                currentVideo = video;
-                const soundBtn = item.querySelector('.sound-btn');
-                if (soundBtn) soundBtn.innerHTML = '🔊';
-            } else {
-                const soundBtn = item.querySelector('.sound-btn');
-                if (soundBtn) soundBtn.innerHTML = '🔇';
+            const soundBtn = item.querySelector('.sound-btn');
+            if (video) {
+                video.pause();
+                video.muted = true;
             }
+            if (soundBtn) soundBtn.innerHTML = '🔇';
         });
-        currentIndex = index;
+        
+        if (allVideos[index]) {
+            currentVideo = allVideos[index].querySelector('video');
+            const soundBtn = allVideos[index].querySelector('.sound-btn');
+            if (currentVideo) {
+                currentVideo.muted = false;
+                currentVideo.play().catch(e => console.log('Play error:', e));
+            }
+            if (soundBtn) soundBtn.innerHTML = '🔊';
+            currentIndex = index;
+        }
     }
 
     function getCurrentIndex() {
@@ -502,16 +731,38 @@
             const newIndex = getCurrentIndex();
             if (newIndex !== currentIndex && newIndex >= 0 && newIndex < allVideos.length) {
                 playVideo(newIndex);
+                if (!scrollInstruction.classList.contains('hide')) {
+                    scrollInstruction.classList.add('hide');
+                }
             }
         }, 50);
     });
 
-    function toggleSound(btn) {
+    let touchStartY = 0;
+    shortsContainer.addEventListener('touchstart', (e) => {
+        touchStartY = e.touches[0].clientY;
+    });
+    
+    shortsContainer.addEventListener('touchmove', (e) => {
+        const touchEndY = e.touches[0].clientY;
+        if (touchStartY - touchEndY > 30) {
+            if (!scrollInstruction.classList.contains('hide')) {
+                scrollInstruction.classList.add('hide');
+            }
+        }
+    });
+
+    function toggleSound(btn, videoId) {
         const parent = btn.closest('.short-video');
         const video = parent.querySelector('video');
         if (video) {
-            video.muted = !video.muted;
-            btn.innerHTML = video.muted ? '🔇' : '🔊';
+            if (video.muted) {
+                video.muted = false;
+                btn.innerHTML = '🔊';
+            } else {
+                video.muted = true;
+                btn.innerHTML = '🔇';
+            }
         }
     }
 
@@ -529,87 +780,159 @@
         link.href = `/download-shorts/${shortId}`;
         link.download = `${sarlavha}.mp4`;
         link.click();
-        
         btn.style.transform = 'scale(1.2)';
         setTimeout(() => btn.style.transform = 'scale(1)', 200);
     }
 
-    // KOD KIRITISH
-    let currentCode = '';
-    const maxCodeLength = 4;
-    const codeDisplay = document.getElementById('codeDisplay');
+    // ============ MODAL CODE INPUT ============
     const modalOverlay = document.getElementById('modalOverlay');
-    const codeBar = document.getElementById('codeBar');
     const filmLoading = document.getElementById('filmLoading');
-
-    function updateDisplay() {
-        codeDisplay.textContent = currentCode.padEnd(maxCodeLength, '_');
-    }
-
-    function addDigit(d) {
-        if (currentCode.length < maxCodeLength) {
-            currentCode += d;
-            updateDisplay();
-        }
-    }
-
-    function clearCode() { currentCode = ''; updateDisplay(); }
-    function backspace() { currentCode = currentCode.slice(0, -1); updateDisplay(); }
+    const filmKodInput = document.getElementById('filmKod');
+    const watchSubmitBtn = document.getElementById('watchSubmitBtn');
+    const openModalBtn = document.getElementById('openModalBtn');
+    const closeModalBtn = document.getElementById('closeModalBtn');
 
     function submitCode() {
-        if (currentCode.length !== maxCodeLength) {
-            alert(' kod kiriting!');
+        let kod = filmKodInput.value.trim();
+        
+        if (kod.length === 0) {
+            alert('Iltimos, film kodini kiriting!');
             return;
         }
+        
+        kod = kod.toUpperCase();
+        
         filmLoading.classList.add('show');
-        fetch(`/api/check/${currentCode}`)
+        
+        fetch(`/api/check/${kod}`)
             .then(res => res.json())
             .then(data => {
                 if (data.exists) {
-                    window.location.href = `/film/${currentCode}`;
+                    window.location.href = `/film/${kod}`;
                 } else {
                     filmLoading.classList.remove('show');
-                    alert('Bunday kod topilmadi!');
+                    alert('Bunday kodli film topilmadi!');
+                    filmKodInput.value = '';
+                    filmKodInput.focus();
                 }
             })
-            .catch(() => {
+            .catch(err => {
                 filmLoading.classList.remove('show');
-                alert('Xatolik!');
+                alert('Xatolik yuz berdi! Qaytadan urinib ko\'ring.');
+                console.error('Error:', err);
             });
     }
 
-    document.querySelectorAll('.numpad-btn').forEach(btn => {
-        const val = btn.getAttribute('data-value');
-        if (val && val.trim()) btn.addEventListener('click', () => addDigit(val));
-    });
-    document.getElementById('clearBtn').addEventListener('click', clearCode);
-    document.getElementById('backspaceBtn').addEventListener('click', backspace);
-    document.getElementById('watchSubmitBtn').addEventListener('click', submitCode);
-    document.getElementById('openModalBtn').addEventListener('click', () => {
+    openModalBtn.addEventListener('click', () => {
         modalOverlay.classList.add('show');
-        codeBar.style.transform = 'translateY(100%)';
+        setTimeout(() => {
+            filmKodInput.focus();
+        }, 300);
     });
 
-    const closeModalBtn = document.getElementById('closeModalBtn');
-    if (closeModalBtn) {
-        closeModalBtn.addEventListener('click', () => {
+    closeModalBtn.addEventListener('click', () => {
+        modalOverlay.classList.remove('show');
+        filmKodInput.value = '';
+    });
+
+    modalOverlay.addEventListener('click', (e) => {
+        if (e.target === modalOverlay) {
             modalOverlay.classList.remove('show');
-            codeBar.style.transform = 'translateY(0)';
-            clearCode();
+            filmKodInput.value = '';
+        }
+    });
+
+    watchSubmitBtn.addEventListener('click', submitCode);
+
+    filmKodInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            submitCode();
+        }
+    });
+
+    // ============ SERVICE WORKER (PWA) ============
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/static/sw.js')
+                .then(reg => console.log('Service Worker registered:', reg))
+                .catch(err => console.log('Service Worker error:', err));
         });
     }
 
+    // Install prompt
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        
+        const installBtn = document.createElement('div');
+        installBtn.innerHTML = '📱 Ilovani o\'rnatish';
+        installBtn.style.position = 'fixed';
+        installBtn.style.bottom = '100px';
+        installBtn.style.left = '50%';
+        installBtn.style.transform = 'translateX(-50%)';
+        installBtn.style.background = 'linear-gradient(135deg, #667eea, #764ba2)';
+        installBtn.style.color = 'white';
+        installBtn.style.padding = '12px 24px';
+        installBtn.style.borderRadius = '50px';
+        installBtn.style.zIndex = '1000';
+        installBtn.style.cursor = 'pointer';
+        installBtn.style.fontWeight = 'bold';
+        installBtn.style.boxShadow = '0 4px 15px rgba(0,0,0,0.3)';
+        installBtn.onclick = () => {
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.then(() => {
+                installBtn.remove();
+            });
+        };
+        document.body.appendChild(installBtn);
+        
+        setTimeout(() => {
+            if (installBtn.parentNode) installBtn.remove();
+        }, 10000);
+    });
+
+    // ============ INITIALIZATION ============
     window.addEventListener('load', () => {
         getAllVideos();
+        
         document.querySelectorAll('.sound-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => { e.stopPropagation(); toggleSound(btn); });
+            const videoId = btn.getAttribute('data-id');
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                toggleSound(btn, videoId);
+            });
         });
+        
         document.querySelectorAll('.like-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => { e.stopPropagation(); likeVideo(btn); });
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                likeVideo(btn);
+            });
         });
+        
         document.querySelectorAll('.download-short').forEach(btn => {
-            btn.addEventListener('click', (e) => { e.stopPropagation(); downloadShort(btn); });
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                downloadShort(btn);
+            });
         });
+        
+        setTimeout(() => {
+            if (allVideos.length > 0 && shortsContainer.style.display === 'block') {
+                playVideo(0);
+            }
+        }, 500);
+    });
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            if (currentVideo) currentVideo.pause();
+        } else {
+            if (currentVideo && currentVideo.paused && shortsContainer.style.display === 'block') {
+                currentVideo.play().catch(e => console.log());
+            }
+        }
     });
 </script>
 </body>
