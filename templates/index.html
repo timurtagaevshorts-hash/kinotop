@@ -1,844 +1,259 @@
-<!DOCTYPE html>
-<html lang="uz">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Kinotop | Shorts</title>
-    <link rel="manifest" href="/static/manifest.json">
-    <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
-    <meta name="theme-color" content="#667eea">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
+// ============ TO'LIQ TUZATILGAN VIDEO PLAYER ============
 
-        body {
-            background: #000;
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            overflow: hidden;
-            height: 100vh;
-            position: fixed;
-            width: 100%;
+function stopAllVideos() {
+    allVideos.forEach(item => {
+        const iframe = item.querySelector('iframe');
+        if (!iframe) return;
+        
+        // Iframe ni to'liq tozalash
+        const originalSrc = iframe.dataset.src;
+        iframe.src = 'about:blank';
+        iframe.classList.remove('active');
+        iframe.classList.add('inactive');
+        
+        // Original src ni saqlash
+        if (originalSrc) {
+            iframe.dataset.src = originalSrc;
         }
+    });
+}
 
-        .preloader {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
-            z-index: 1000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: opacity 0.5s ease, visibility 0.5s ease;
-        }
-        .preloader.hide { opacity: 0; visibility: hidden; }
-        .preloader-content { text-align: center; animation: fadeInUp 0.8s ease; }
-        .preloader-logo { font-size: 4rem; animation: bounce 1s ease infinite; }
-        .preloader-title {
-            font-size: 2rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, #fff, #a8b2ff);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin: 20px 0 10px;
-        }
-        .preloader-subtitle { color: rgba(255,255,255,0.6); font-size: 0.9rem; margin-bottom: 30px; }
-        .start-btn {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            border: none;
-            padding: 14px 40px;
-            border-radius: 50px;
-            color: white;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.3s, box-shadow 0.3s;
-            animation: pulse 1.5s infinite;
-        }
-        .start-btn:active { transform: scale(0.95); }
-
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(30px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-15px); }
-        }
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(102,126,234,0.7); }
-            70% { box-shadow: 0 0 0 15px rgba(102,126,234,0); }
-            100% { box-shadow: 0 0 0 0 rgba(102,126,234,0); }
-        }
-
-        .scroll-instruction {
-            position: absolute;
-            bottom: 150px;
-            left: 0;
-            right: 0;
-            text-align: center;
-            z-index: 50;
-            animation: fadeInOut 2s infinite;
-        }
-        .scroll-instruction.hide { opacity: 0; visibility: hidden; }
-        .scroll-arrow {
-            width: 30px;
-            height: 30px;
-            border-left: 2px solid white;
-            border-bottom: 2px solid white;
-            transform: rotate(-45deg);
-            margin: 0 auto 10px;
-            animation: arrowBounce 1.5s infinite;
-        }
-        .scroll-text { color: rgba(255,255,255,0.8); font-size: 0.8rem; letter-spacing: 1px; }
-        @keyframes arrowBounce {
-            0%, 100% { transform: rotate(-45deg) translate(0,0); opacity: 0.3; }
-            50% { transform: rotate(-45deg) translate(10px,10px); opacity: 1; }
-        }
-        @keyframes fadeInOut {
-            0%, 100% { opacity: 0.5; }
-            50% { opacity: 1; }
-        }
-
-        .shorts-container {
-            position: relative;
-            width: 100%;
-            height: 100vh;
-            overflow-y: scroll;
-            scroll-snap-type: y mandatory;
-            scroll-behavior: smooth;
-            background: #000;
-            -webkit-overflow-scrolling: touch;
-        }
-        .shorts-container::-webkit-scrollbar { display: none; }
-
-        .short-video {
-            position: relative;
-            width: 100%;
-            height: 100vh;
-            scroll-snap-align: start;
-            background: #000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-        }
-        .short-video iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-            position: absolute;
-            top: 0;
-            left: 0;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-        .short-video iframe.active {
-            opacity: 1;
-            z-index: 5;
-        }
-        .short-video iframe.inactive {
-            opacity: 0;
-            z-index: 1;
-        }
-
-        .short-info {
-            position: absolute;
-            bottom: 80px;
-            left: 16px;
-            right: 80px;
-            z-index: 10;
-            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
-            padding: 15px 12px;
-            border-radius: 12px;
-            pointer-events: none;
-        }
-        .short-title {
-            color: white;
-            font-size: 0.9rem;
-            font-weight: 600;
-            margin-bottom: 3px;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-        }
-        .short-desc {
-            color: rgba(255,255,255,0.7);
-            font-size: 0.75rem;
-            text-shadow: 0 1px 1px rgba(0,0,0,0.5);
-        }
-
-        .overlay-buttons {
-            position: absolute;
-            right: 12px;
-            bottom: 80px;
-            z-index: 20;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-        .overlay-btn {
-            background: rgba(0,0,0,0.5);
-            backdrop-filter: blur(8px);
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 1.1rem;
-            cursor: pointer;
-            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s;
-            z-index: 30;
-        }
-        .overlay-btn:active { transform: scale(0.95); }
-        .overlay-btn:hover { background: rgba(102,126,234,0.8); transform: scale(1.05); }
-
-        .logo {
-            position: fixed;
-            top: 15px;
-            left: 15px;
-            z-index: 50;
-            background: rgba(0,0,0,0.5);
-            backdrop-filter: blur(10px);
-            padding: 6px 16px;
-            border-radius: 30px;
-            color: white;
-            font-weight: bold;
-            font-size: 0.9rem;
-        }
-        .logo span {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .admin-btn {
-            position: fixed;
-            top: 15px;
-            right: 15px;
-            z-index: 50;
-            background: rgba(0,0,0,0.5);
-            backdrop-filter: blur(10px);
-            width: 38px;
-            height: 38px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            text-decoration: none;
-            font-size: 1rem;
-        }
-        .no-shorts {
-            width: 100%;
-            height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            text-align: center;
-            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .code-btn {
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-            right: 20px;
-            background: linear-gradient(135deg, rgba(102,126,234,0.95), rgba(118,75,162,0.95));
-            backdrop-filter: blur(20px);
-            border-radius: 60px;
-            padding: 14px 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            cursor: pointer;
-            z-index: 100;
-            border: 1px solid rgba(255,255,255,0.2);
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        .code-btn:active { transform: scale(0.98); }
-        .code-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 25px rgba(0,0,0,0.4); }
-        .code-btn-left { display: flex; align-items: center; gap: 12px; }
-        .code-btn-icon {
-            width: 44px;
-            height: 44px;
-            background: rgba(255,255,255,0.2);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.2rem;
-        }
-        .code-btn-text h4 { color: white; font-size: 0.9rem; font-weight: 700; margin-bottom: 2px; }
-        .code-btn-text p { color: rgba(255,255,255,0.7); font-size: 0.65rem; }
-        .code-btn-arrow { color: white; font-size: 1.1rem; opacity: 0.8; }
-
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.96);
-            backdrop-filter: blur(20px);
-            z-index: 200;
-            display: none;
-            align-items: center;
-            justify-content: center;
-        }
-        .modal-overlay.show { display: flex; }
-        .modal-container {
-            width: 90%;
-            max-width: 380px;
-            background: rgba(255,255,255,0.1);
-            backdrop-filter: blur(20px);
-            border-radius: 40px;
-            overflow: hidden;
-            border: 1px solid rgba(255,255,255,0.2);
-        }
-        .modal-header {
-            padding: 25px 20px;
-            text-align: center;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-        }
-        .modal-header h3 { color: white; font-size: 1.3rem; margin-bottom: 8px; }
-        .modal-header p { color: rgba(255,255,255,0.8); font-size: 0.8rem; }
-
-        .code-screen {
-            background: rgba(0,0,0,0.5);
-            margin: 25px 20px;
-            padding: 20px;
-            border-radius: 30px;
-            text-align: center;
-            border: 2px solid rgba(102,126,234,0.5);
-        }
-        .code-digits {
-            font-size: 2.5rem;
-            font-weight: 800;
-            letter-spacing: 15px;
-            color: white;
-            font-family: monospace;
-        }
-        .code-hint { font-size: 0.7rem; color: rgba(255,255,255,0.5); margin-top: 10px; }
-
-        .numpad {
-            padding: 0 20px 20px;
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 12px;
-        }
-        .numpad-btn {
-            background: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.15);
-            border-radius: 60px;
-            padding: 18px;
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: white;
-            text-align: center;
-            cursor: pointer;
-            transition: transform 0.2s, background 0.2s;
-        }
-        .numpad-btn:active { background: #667eea; transform: scale(0.95); }
-        .numpad-btn:hover { background: #667eea; transform: scale(1.05); }
-        .numpad-empty { background: transparent; border: none; pointer-events: none; }
-
-        .action-buttons {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            padding: 0 20px 20px;
-        }
-        .action-clear {
-            background: rgba(220,53,69,0.8);
-            border: none;
-            border-radius: 60px;
-            padding: 14px;
-            color: white;
-            font-size: 0.9rem;
-            font-weight: 600;
-            cursor: pointer;
-        }
-        .action-delete {
-            background: rgba(255,193,7,0.8);
-            border: none;
-            border-radius: 60px;
-            padding: 14px;
-            color: #333;
-            font-size: 0.9rem;
-            font-weight: 600;
-            cursor: pointer;
-        }
-        .watch-submit {
-            width: calc(100% - 40px);
-            margin: 0 20px 25px;
-            padding: 16px;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            border: none;
-            border-radius: 60px;
-            color: white;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-        .watch-submit:active { transform: scale(0.98); }
-        .modal-close {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(255,255,255,0.2);
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 1.2rem;
-            cursor: pointer;
-            z-index: 210;
-            transition: background 0.2s;
-        }
-        .modal-close:hover { background: rgba(255,255,255,0.3); }
-
-        .film-loading {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.95);
-            z-index: 300;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-            gap: 20px;
-            visibility: hidden;
-            opacity: 0;
-            transition: visibility 0.3s, opacity 0.3s;
-        }
-        .film-loading.show { visibility: visible; opacity: 1; }
-        .film-loading-spinner {
-            width: 50px;
-            height: 50px;
-            border: 3px solid rgba(102,126,234,0.3);
-            border-top-color: #667eea;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        .film-loading-text { color: white; font-size: 1rem; }
-
-        @keyframes heartBeat {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.5); }
-            100% { transform: scale(1); }
-        }
-
-        @media (max-width: 480px) {
-            .code-digits { font-size: 1.8rem; letter-spacing: 10px; }
-            .numpad-btn { padding: 14px; font-size: 1.3rem; }
-        }
-    </style>
-</head>
-<body>
-
-<div class="preloader" id="preloader">
-    <div class="preloader-content">
-        <div class="preloader-logo">🎬</div>
-        <div class="preloader-title">KINOTOP</div>
-        <div class="preloader-subtitle">Eng yangi va qiziqarli shortslar</div>
-        <button class="start-btn" id="startBtn">🎥 Kirish</button>
-    </div>
-</div>
-
-<div class="scroll-instruction" id="scrollInstruction">
-    <div class="scroll-arrow"></div>
-    <div class="scroll-text">👆 Shortslarni ko'rish uchun yuqoriga suring</div>
-</div>
-
-<div class="logo"><span>🎬 KINOTOP</span></div>
-<a href="/admin" class="admin-btn">🔐</a>
-
-<div class="shorts-container" id="shortsContainer" style="display: none;"></div>
-
-<div class="code-btn" id="openModalBtn">
-    <div class="code-btn-left">
-        <div class="code-btn-icon"><i class="fas fa-film"></i></div>
-        <div class="code-btn-text">
-            <h4>Film kodini kiriting</h4>
-            <p>4 xonali kod orqali film tomosha qiling</p>
-        </div>
-    </div>
-    <div class="code-btn-arrow"><i class="fas fa-chevron-up"></i></div>
-</div>
-
-<div class="modal-overlay" id="modalOverlay">
-    <div class="modal-close" id="closeModalBtn"><i class="fas fa-times"></i></div>
-    <div class="modal-container">
-        <div class="modal-header">
-            <h3>🎬 Film kodini kiriting</h3>
-            <p>4 xonali kodni kiriting va tomosha qiling</p>
-        </div>
-        <div class="code-screen">
-            <div class="code-digits" id="codeDisplay">____</div>
-            <div class="code-hint">4 xonali kod</div>
-        </div>
-        <div class="numpad">
-            <div class="numpad-btn" data-value="1">1</div><div class="numpad-btn" data-value="2">2</div><div class="numpad-btn" data-value="3">3</div>
-            <div class="numpad-btn" data-value="4">4</div><div class="numpad-btn" data-value="5">5</div><div class="numpad-btn" data-value="6">6</div>
-            <div class="numpad-btn" data-value="7">7</div><div class="numpad-btn" data-value="8">8</div><div class="numpad-btn" data-value="9">9</div>
-            <div class="numpad-btn" data-value=""></div><div class="numpad-btn" data-value="0">0</div><div class="numpad-btn" data-value=""></div>
-        </div>
-        <div class="action-buttons">
-            <div class="action-clear" id="clearBtn">O'chirish</div>
-            <div class="action-delete" id="backspaceBtn"><i class="fas fa-backspace"></i> O'chir</div>
-        </div>
-        <button class="watch-submit" id="watchSubmitBtn"><i class="fas fa-play"></i> Tomosha qilish</button>
-    </div>
-</div>
-
-<div class="film-loading" id="filmLoading">
-    <div class="film-loading-spinner"></div>
-    <div class="film-loading-text">🎬 Kino qidirilmoqda...</div>
-</div>
-
-<script>
-    // ============ ORIGINAL SHORTS DATA (SERVERDAN) ============
-    const originalShorts = {{ shorts | tojson | safe }};
+function playVideoAt(index) {
+    if (index < 0 || index >= allVideos.length) return;
+    if (index === currentIndex) return;
     
-    // Random tartib - har safar saytga kirganda yangi tartib
-    function shuffleArray(arr) {
-        for (let i = arr.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [arr[i], arr[j]] = [arr[j], arr[i]];
+    // BARCHA IFRAMELARNI TO'LIQ O'CHIRISH
+    allVideos.forEach(item => {
+        const iframe = item.querySelector('iframe');
+        if (!iframe) return;
+        
+        const originalSrc = iframe.dataset.src;
+        
+        // Iframe ni to'liq o'chiramiz
+        iframe.src = 'about:blank';
+        iframe.classList.remove('active');
+        iframe.classList.add('inactive');
+        
+        // Src ni saqlab qo'yamiz
+        if (originalSrc) {
+            iframe.dataset.src = originalSrc;
         }
-        return arr;
+    });
+    
+    const currentVideo = allVideos[index];
+    if (!currentVideo) return;
+    
+    const iframe = currentVideo.querySelector('iframe');
+    if (!iframe) return;
+    
+    let src = iframe.dataset.src;
+    if (!src) return;
+    
+    // autoplay parametrini to'g'irlash
+    if (src.includes('autoplay=0')) {
+        src = src.replace('autoplay=0', 'autoplay=1');
+    } else if (!src.includes('autoplay=1')) {
+        src = src + '&autoplay=1';
     }
     
-    let shorts = shuffleArray([...originalShorts]);
-    const shortsContainer = document.getElementById('shortsContainer');
-    
-    function escapeHtml(text) {
-        if (!text) return '';
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
+    // Mute ni olib tashlash (ovoz bilan boshlash uchun)
+    if (src.includes('mute=1')) {
+        src = src.replace('mute=1', 'mute=0');
+    } else if (!src.includes('mute=0')) {
+        src = src + '&mute=0';
     }
     
-    function renderShorts() {
-        shortsContainer.innerHTML = '';
-        shorts.forEach((short, idx) => {
-            const div = document.createElement('div');
-            div.className = 'short-video';
-            div.setAttribute('data-id', short.id);
-            div.setAttribute('data-index', idx);
-            div.innerHTML = `
-                <iframe data-src="${short.embed_url}?autoplay=0&mute=0&controls=0&modestbranding=1&showinfo=0&rel=0&playsinline=1&enablejsapi=1" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-                <div class="short-info">
-                    <div class="short-title">${escapeHtml(short.sarlavha)}</div>
-                    <div class="short-desc">${escapeHtml(short.tafsilot || '')}</div>
-                </div>
-                <div class="overlay-buttons">
-                    <div class="overlay-btn sound-btn" data-id="${short.id}">🔇</div>
-                    <div class="overlay-btn like-btn">❤️</div>
-                </div>
-            `;
-            shortsContainer.appendChild(div);
-        });
+    // Iframe ni yangilash (kichik delay bilan)
+    setTimeout(() => {
+        iframe.src = src;
+        iframe.classList.remove('inactive');
+        iframe.classList.add('active');
+    }, 50);
+    
+    currentIframe = iframe;
+    currentIndex = index;
+    
+    // Barcha sound buttonlarni 🔇 ga o'rnatish
+    document.querySelectorAll('.sound-btn').forEach(btn => {
+        btn.innerHTML = '🔇';
+    });
+    
+    // Joriy videoning sound buttonini 🔊 ga o'rnatish
+    const soundBtn = currentVideo.querySelector('.sound-btn');
+    if (soundBtn) {
+        soundBtn.innerHTML = '🔊';
+    }
+}
+
+// Scroll handler - optimallashtirilgan
+let scrollTimer = null;
+let lastScrollTime = 0;
+let isScrolling = false;
+
+function onScroll() {
+    const now = Date.now();
+    if (now - lastScrollTime < 50) return; // Throttle
+    
+    lastScrollTime = now;
+    
+    if (scrollTimer) clearTimeout(scrollTimer);
+    
+    if (!isScrolling) {
+        isScrolling = true;
     }
     
-    // ============ PRELOADER ============
-    const preloader = document.getElementById('preloader');
-    const startBtn = document.getElementById('startBtn');
-    const scrollInstruction = document.getElementById('scrollInstruction');
-    
-    // ============ VIDEO PLAYER LOGIC ============
-    let allVideos = [];
-    let currentIndex = -1;
-    let currentIframe = null;
-    let scrollTimer = null;
-    
-    function getAllVideos() {
-        allVideos = Array.from(document.querySelectorAll('.short-video'));
-    }
-    
-    function attachEventListeners() {
-        // Sound buttonlar
-        document.querySelectorAll('.sound-btn').forEach(btn => {
-            const newBtn = btn.cloneNode(true);
-            btn.parentNode.replaceChild(newBtn, btn);
-            
-            newBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const videoId = newBtn.getAttribute('data-id');
-                toggleSound(newBtn, videoId);
-            });
-        });
-        
-        // Like buttonlar
-        document.querySelectorAll('.like-btn').forEach(btn => {
-            const newBtn = btn.cloneNode(true);
-            btn.parentNode.replaceChild(newBtn, btn);
-            
-            newBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                likeVideo(newBtn);
-            });
-        });
-    }
-    
-    function stopAllVideos() {
-        allVideos.forEach((item) => {
-            const iframe = item.querySelector('iframe');
-            if (iframe && iframe.contentWindow) {
-                iframe.contentWindow.postMessage('{"event":"command","func":"stopVideo","args":""}', '*');
-                iframe.contentWindow.postMessage('{"event":"command","func":"mute","args":""}', '*');
-            }
-        });
-    }
-    
-    function playVideoAt(index) {
-        if (index === currentIndex) return;
-        if (index < 0 || index >= allVideos.length) return;
-        
-        // Oldingi videoni to'xtatish
-        if (currentIframe && currentIframe.contentWindow) {
-            currentIframe.contentWindow.postMessage('{"event":"command","func":"stopVideo","args":""}', '*');
-            currentIframe.contentWindow.postMessage('{"event":"command","func":"mute","args":""}', '*');
+    scrollTimer = setTimeout(() => {
+        const newIndex = getCurrentVisibleIndex();
+        if (newIndex !== currentIndex && newIndex >= 0 && newIndex < allVideos.length) {
+            playVideoAt(newIndex);
         }
-        
-        // Yangi videoni o'ynatish
-        const newItem = allVideos[index];
-        if (!newItem) return;
-        
-        const newIframe = newItem.querySelector('iframe');
-        const originalSrc = newIframe.getAttribute('data-src');
-        const soundBtn = newItem.querySelector('.sound-btn');
-        
-        if (newIframe && originalSrc) {
-            newIframe.src = '';
-            newIframe.src = originalSrc + '&autoplay=1&mute=0';
-            currentIframe = newIframe;
-        }
-        
-        if (soundBtn) {
-            soundBtn.innerHTML = '🔊';
-        }
-        
-        currentIndex = index;
-    }
+        isScrolling = false;
+    }, 100);
+}
+
+// Touch support bilan optimallashtirish
+let touchStartY = 0;
+let touchEndY = 0;
+let touchScrollTimer = null;
+
+shortsContainer.addEventListener('touchstart', (e) => {
+    touchStartY = e.touches[0].clientY;
+}, { passive: true });
+
+shortsContainer.addEventListener('touchmove', (e) => {
+    touchEndY = e.touches[0].clientY;
+}, { passive: true });
+
+shortsContainer.addEventListener('touchend', () => {
+    const diff = touchStartY - touchEndY;
     
-    function toggleSound(btn, videoId) {
-        const parent = btn.closest('.short-video');
-        const idx = parseInt(parent.getAttribute('data-index'));
+    if (Math.abs(diff) > 50) { // Minimal swipe masofasi
+        if (touchScrollTimer) clearTimeout(touchScrollTimer);
         
-        if (idx === currentIndex) {
-            if (btn.innerHTML === '🔊') {
-                btn.innerHTML = '🔇';
-                if (currentIframe && currentIframe.contentWindow) {
-                    currentIframe.contentWindow.postMessage('{"event":"command","func":"mute","args":""}', '*');
-                }
-            } else {
-                btn.innerHTML = '🔊';
-                if (currentIframe && currentIframe.contentWindow) {
-                    currentIframe.contentWindow.postMessage('{"event":"command","func":"unMute","args":""}', '*');
-                }
-            }
-        } else {
-            playVideoAt(idx);
-            setTimeout(() => {
-                const newBtn = document.querySelector(`.sound-btn[data-id="${videoId}"]`);
-                if (newBtn && newBtn.innerHTML === '🔇') {
-                    if (currentIframe && currentIframe.contentWindow) {
-                        currentIframe.contentWindow.postMessage('{"event":"command","func":"mute","args":""}', '*');
-                    }
-                }
-            }, 100);
-        }
-    }
-    
-    function likeVideo(btn) {
-        btn.style.transform = 'scale(1.3)';
-        btn.style.transition = 'transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)';
-        
-        setTimeout(() => {
-            btn.style.transform = 'scale(1)';
-        }, 300);
-        
-        btn.innerHTML = '❤️';
-        setTimeout(() => btn.innerHTML = '❤️', 1000);
-    }
-    
-    function initFirstVideo() {
-        if (allVideos.length > 0) {
-            playVideoAt(0);
-        }
-    }
-    
-    function getCurrentVisibleIndex() {
-        const scrollTop = shortsContainer.scrollTop;
-        const itemHeight = window.innerHeight;
-        const rawIndex = scrollTop / itemHeight;
-        const roundedIndex = Math.round(rawIndex);
-        return Math.min(Math.max(0, roundedIndex), allVideos.length - 1);
-    }
-    
-    function onScroll() {
-        if (scrollTimer) clearTimeout(scrollTimer);
-        
-        scrollTimer = setTimeout(() => {
+        touchScrollTimer = setTimeout(() => {
             const newIndex = getCurrentVisibleIndex();
             if (newIndex !== currentIndex && newIndex >= 0 && newIndex < allVideos.length) {
                 playVideoAt(newIndex);
             }
         }, 100);
     }
+});
+
+// Ovozni yoqish/o'chirish (yangilangan versiya)
+function toggleSound(btn, videoId) {
+    const parent = btn.closest('.short-video');
+    const idx = parseInt(parent.getAttribute('data-index'));
     
-    // ============ KOD KIRITISH ============
-    let currentCode = '';
-    const maxCodeLength = 4;
-    const codeDisplay = document.getElementById('codeDisplay');
-    const modalOverlay = document.getElementById('modalOverlay');
-    const filmLoading = document.getElementById('filmLoading');
-    const openModalBtn = document.getElementById('openModalBtn');
-    const closeModalBtn = document.getElementById('closeModalBtn');
-    const clearBtn = document.getElementById('clearBtn');
-    const backspaceBtn = document.getElementById('backspaceBtn');
-    const watchSubmitBtn = document.getElementById('watchSubmitBtn');
-    
-    function updateDisplay() {
-        codeDisplay.textContent = currentCode.padEnd(maxCodeLength, '_');
-        if (currentCode.length === maxCodeLength) submitCode();
-    }
-    
-    function addDigit(d) {
-        if (currentCode.length < maxCodeLength) { 
-            currentCode += d; 
-            updateDisplay(); 
-        }
-    }
-    
-    function clearCode() { 
-        currentCode = ''; 
-        updateDisplay(); 
-    }
-    
-    function backspace() { 
-        currentCode = currentCode.slice(0, -1); 
-        updateDisplay(); 
-    }
-    
-    function submitCode() {
-        if (currentCode.length !== maxCodeLength) { 
-            alert('4 xonali kod kiriting!'); 
-            return; 
-        }
-        const kod = currentCode;
-        filmLoading.classList.add('show');
-        fetch(`/api/check/${kod}`)
-            .then(res => res.json())
-            .then(data => {
-                if (data.exists) {
-                    window.location.href = `/film/${kod}`;
-                } else {
-                    throw new Error('NOT_FOUND');
-                }
-            })
-            .catch(() => {
-                filmLoading.classList.remove('show');
-                alert(`"${kod}" kodli film topilmadi!`);
-                clearCode();
-            });
-    }
-    
-    // ============ EVENT LISTENERS ============
-    document.querySelectorAll('.numpad-btn').forEach(btn => {
-        const val = btn.getAttribute('data-value');
-        if (val && val.trim() !== '') {
-            btn.addEventListener('click', () => addDigit(val));
-        }
-    });
-    
-    clearBtn.addEventListener('click', clearCode);
-    backspaceBtn.addEventListener('click', backspace);
-    watchSubmitBtn.addEventListener('click', submitCode);
-    
-    openModalBtn.addEventListener('click', () => { 
-        modalOverlay.classList.add('show'); 
-        clearCode(); 
-    });
-    
-    closeModalBtn.addEventListener('click', () => { 
-        modalOverlay.classList.remove('show'); 
-        clearCode(); 
-    });
-    
-    modalOverlay.addEventListener('click', (e) => { 
-        if (e.target === modalOverlay) { 
-            modalOverlay.classList.remove('show'); 
-            clearCode(); 
-        } 
-    });
-    
-    // ESC tugmasi
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && modalOverlay.classList.contains('show')) {
-            modalOverlay.classList.remove('show');
-            clearCode();
-        }
-        
-        if (modalOverlay.classList.contains('show') && /^[0-9]$/.test(e.key)) {
-            addDigit(e.key);
-        }
-        
-        if (modalOverlay.classList.contains('show') && e.key === 'Enter') {
-            submitCode();
-        }
-    });
-    
-    // Start tugmasi
-    startBtn.addEventListener('click', () => {
-        preloader.classList.add('hide');
-        shortsContainer.style.display = 'block';
-        renderShorts();
-        getAllVideos();
-        attachEventListeners();
-        shortsContainer.addEventListener('scroll', onScroll);
-        setTimeout(() => { 
-            scrollInstruction.classList.add('hide');
-            if (allVideos.length > 0) {
-                initFirstVideo();
+    if (idx === currentIndex) {
+        if (btn.innerHTML === '🔊') {
+            btn.innerHTML = '🔇';
+            if (currentIframe && currentIframe.contentWindow) {
+                currentIframe.contentWindow.postMessage('{"event":"command","func":"mute","args":""}', '*');
             }
-        }, 300);
-    });
-    
-    // Backgroundda video to'xtasin
-    document.addEventListener('visibilitychange', () => {
-        if (document.hidden && currentIframe && currentIframe.contentWindow) {
-            currentIframe.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
+        } else {
+            btn.innerHTML = '🔊';
+            if (currentIframe && currentIframe.contentWindow) {
+                currentIframe.contentWindow.postMessage('{"event":"command","func":"unMute","args":""}', '*');
+            }
+        }
+    } else {
+        // Boshqa videoga o'tish
+        playVideoAt(idx);
+    }
+}
+
+// Videoni to'liq tozalash (sahifa yopilganda yoki hidden bo'lganda)
+function cleanupAllVideos() {
+    allVideos.forEach(item => {
+        const iframe = item.querySelector('iframe');
+        if (iframe) {
+            iframe.src = 'about:blank';
         }
     });
+}
+
+// Sahifa yopilganda yoki backgroundga o'tganda
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        // Backgroundga o'tganda barcha videolarni to'xtatish
+        allVideos.forEach(item => {
+            const iframe = item.querySelector('iframe');
+            if (iframe && iframe.contentWindow) {
+                iframe.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
+            }
+        });
+    } else {
+        // Qaytib kelganda joriy videoni davom ettirish
+        if (currentIndex >= 0 && currentIndex < allVideos.length) {
+            const currentVideo = allVideos[currentIndex];
+            const iframe = currentVideo.querySelector('iframe');
+            if (iframe && iframe.contentWindow) {
+                iframe.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
+            }
+        }
+    }
+});
+
+// Sahifa yopilishidan oldin tozalash
+window.addEventListener('beforeunload', () => {
+    cleanupAllVideos();
+});
+
+// Start tugmasi (yangilangan)
+startBtn.addEventListener('click', () => {
+    preloader.classList.add('hide');
+    shortsContainer.style.display = 'block';
+    renderShorts();
+    getAllVideos();
+    attachEventListeners();
     
-    // Error handling
-    window.addEventListener('error', function(e) {
-        console.error('Global error:', e.message);
+    // Scroll event listener
+    shortsContainer.addEventListener('scroll', onScroll);
+    
+    setTimeout(() => { 
+        scrollInstruction.classList.add('hide');
+        if (allVideos.length > 0) {
+            initFirstVideo();
+        }
+    }, 300);
+});
+
+function initFirstVideo() {
+    if (allVideos.length > 0) {
+        playVideoAt(0);
+    }
+}
+
+// Render shorts funksiyasini yangilash (data-src to'g'ri formatda)
+function renderShorts() {
+    shortsContainer.innerHTML = '';
+    shorts.forEach((short, idx) => {
+        const div = document.createElement('div');
+        div.className = 'short-video';
+        div.setAttribute('data-id', short.id);
+        div.setAttribute('data-index', idx);
+        
+        // data-src ni to'g'ri formatda saqlash
+        let embedUrl = short.embed_url;
+        if (!embedUrl.includes('autoplay=0')) {
+            if (embedUrl.includes('?')) {
+                embedUrl += '&autoplay=0';
+            } else {
+                embedUrl += '?autoplay=0';
+            }
+        }
+        
+        div.innerHTML = `
+            <iframe data-src="${embedUrl}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            <div class="short-info">
+                <div class="short-title">${escapeHtml(short.sarlavha)}</div>
+                <div class="short-desc">${escapeHtml(short.tafsilot || '')}</div>
+            </div>
+            <div class="overlay-buttons">
+                <div class="overlay-btn sound-btn" data-id="${short.id}">🔇</div>
+                <div class="overlay-btn like-btn">❤️</div>
+            </div>
+        `;
+        shortsContainer.appendChild(div);
     });
-</script>
-</body>
-</html>
+}
