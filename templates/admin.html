@@ -1,71 +1,38 @@
-<!-- ADD FILM PAGE -->
-<div id="add-film-page" style="display: none;">
+cat > admin.html << 'EOF'
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Panel</title>
+    <style>
+        body { font-family: Arial; background: #1a1a2e; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        .card { background: rgba(255,255,255,0.1); padding: 40px; border-radius: 20px; text-align: center; }
+        input { padding: 12px; width: 100%; margin: 10px 0; border-radius: 8px; border: none; }
+        button { background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 12px 24px; border: none; border-radius: 8px; cursor: pointer; }
+        .error { color: #ff6b6b; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+{% if not login %}
     <div class="card">
-        <div class="card-title">
-            <i class="fas fa-link"></i>
-            <span>Yangi film qo'shish (URL orqali)</span>
-        </div>
-        <form method="POST" action="/admin/film" enctype="multipart/form-data">
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Film kodi (4 xonali) *</label>
-                    <input type="text" name="kod" placeholder="Masalan: 1234" maxlength="4" required>
-                </div>
-                <div class="form-group">
-                    <label>Film nomi *</label>
-                    <input type="text" name="nomi" placeholder="Film nomi" required>
-                </div>
-            </div>
-            <div class="form-group">
-                <label>Video URL *</label>
-                <input type="text" name="video_url" placeholder="https://youtu.be/... yoki https://vk.com/video...">
-                <small>YouTube, VK Video, UzMovi, Instagram, Vimeo, DailyMotion qo'llab-quvvatlanadi</small>
-            </div>
-            <div class="form-group">
-                <label>Haqida</label>
-                <textarea name="tafsilot" rows="3" placeholder="Film haqida ma'lumot..."></textarea>
-            </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Yil</label>
-                    <input type="text" name="yil" placeholder="2024">
-                </div>
-                <div class="form-group">
-                    <label>Janr</label>
-                    <input type="text" name="janr" placeholder="Jangari, Fantastika">
-                </div>
-            </div>
-            <div class="form-group">
-                <label>Poster rasm</label>
-                <input type="file" name="rasm" accept="image/*" class="file-input">
-            </div>
-            <button type="submit" class="btn btn-primary">📤 Film yuklash</button>
+        <h1>🔐 Admin Panel</h1>
+        {% if xato %}<div class="error">{{ xato }}</div>{% endif %}
+        <form method="POST">
+            <input type="password" name="parol" placeholder="Parol" required>
+            <button type="submit">Kirish</button>
         </form>
     </div>
-</div>
-
-<!-- ADD SHORT PAGE -->
-<div id="add-short-page" style="display: none;">
+{% else %}
     <div class="card">
-        <div class="card-title">
-            <i class="fas fa-link"></i>
-            <span>Yangi Shorts qo'shish (URL orqali)</span>
-        </div>
-        <form method="POST" action="/admin/shorts" enctype="multipart/form-data">
-            <div class="form-group">
-                <label>Shorts sarlavhasi *</label>
-                <input type="text" name="sarlavha" placeholder="Sarlavha" required>
-            </div>
-            <div class="form-group">
-                <label>Video URL *</label>
-                <input type="text" name="video_url" placeholder="https://youtube.com/shorts/... yoki https://instagram.com/reel/...">
-                <small>YouTube Shorts, Instagram Reel, TikTok qo'llab-quvvatlanadi</small>
-            </div>
-            <div class="form-group">
-                <label>Qisqacha ma'lumot</label>
-                <textarea name="tafsilot" rows="2" placeholder="Ma'lumot..."></textarea>
-            </div>
-            <button type="submit" class="btn btn-primary">📤 Shorts yuklash</button>
-        </form>
+        <h1>✅ Admin Panel</h1>
+        <p>Xush kelibsiz!</p>
+        <p>Jami filmlar: {{ total_films|default(0) }}</p>
+        <p>Jami shortslar: {{ total_shorts|default(0) }}</p>
+        <a href="/admin/logout" style="color: #667eea;">Chiqish</a>
+        <br><br>
+        <a href="/" style="color: #667eea;">Bosh sahifa</a>
     </div>
-</div>
+{% endif %}
+</body>
+</html>
+EOF
