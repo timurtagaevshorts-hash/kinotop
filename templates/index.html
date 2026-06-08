@@ -257,7 +257,6 @@
             to { transform: translate(-50%, -50%) rotate(360deg); }
         }
 
-        /* Logo and admin */
         .logo {
             position: fixed;
             top: 15px;
@@ -309,34 +308,24 @@
             gap: 15px;
         }
 
-        .no-shorts p {
-            font-size: 1rem;
-            opacity: 0.7;
-        }
-
-        /* ============ CODE BUTTON ============ */
-        .code-button-container {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            z-index: 100;
-            padding: 12px 20px 20px;
-            background: linear-gradient(to top, rgba(0,0,0,0.95), transparent);
-        }
-
+        /* ============ CHIROYLI CODE INPUT BUTTON ============ */
         .code-btn {
-            width: 100%;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            border: none;
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, rgba(102,126,234,0.95), rgba(118,75,162,0.95));
+            backdrop-filter: blur(20px);
             border-radius: 60px;
-            padding: 16px 20px;
+            padding: 16px 24px;
             display: flex;
             align-items: center;
             justify-content: space-between;
             cursor: pointer;
-            transition: transform 0.2s;
-            box-shadow: 0 4px 15px rgba(102,126,234,0.3);
+            z-index: 100;
+            border: 1px solid rgba(255,255,255,0.2);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
         }
 
         .code-btn:active {
@@ -346,7 +335,7 @@
         .code-btn-left {
             display: flex;
             align-items: center;
-            gap: 14px;
+            gap: 15px;
         }
 
         .code-btn-icon {
@@ -360,10 +349,6 @@
             font-size: 1.3rem;
         }
 
-        .code-btn-text {
-            text-align: left;
-        }
-
         .code-btn-text h4 {
             color: white;
             font-size: 1rem;
@@ -373,53 +358,72 @@
 
         .code-btn-text p {
             color: rgba(255,255,255,0.7);
-            font-size: 0.75rem;
+            font-size: 0.7rem;
         }
 
         .code-btn-arrow {
             color: white;
             font-size: 1.2rem;
             opacity: 0.8;
+            animation: bounceArrow 1.5s infinite;
         }
 
-        /* ============ MODAL ============ */
+        @keyframes bounceArrow {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(5px); }
+        }
+
+        /* ============ CHIROYLI MODAL (Raqamli klaviatura) ============ */
         .modal-overlay {
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0,0,0,0.95);
+            background: rgba(0, 0, 0, 0.96);
+            backdrop-filter: blur(20px);
             z-index: 200;
             display: none;
             align-items: center;
             justify-content: center;
-            backdrop-filter: blur(10px);
+            animation: fadeIn 0.3s ease;
         }
 
         .modal-overlay.show {
             display: flex;
         }
 
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
         .modal-container {
             width: 90%;
-            max-width: 400px;
-            background: #1a1a2e;
-            border-radius: 28px;
+            max-width: 380px;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(20px);
+            border-radius: 40px;
             overflow: hidden;
-            border: 1px solid rgba(102,126,234,0.3);
+            border: 1px solid rgba(255,255,255,0.2);
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
         }
 
         .modal-header {
             padding: 25px 20px;
-            background: linear-gradient(135deg, #667eea, #764ba2);
             text-align: center;
+            background: linear-gradient(135deg, #667eea, #764ba2);
         }
 
         .modal-header h3 {
             color: white;
             font-size: 1.3rem;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
         }
 
         .modal-header p {
@@ -427,52 +431,112 @@
             font-size: 0.8rem;
         }
 
-        .modal-body {
-            padding: 25px 20px;
-        }
-
-        .code-input-group {
-            margin-bottom: 25px;
-        }
-
-        .code-input-label {
-            color: rgba(255,255,255,0.6);
-            font-size: 0.8rem;
-            margin-bottom: 10px;
-            display: block;
-        }
-
-        .code-input-field {
-            width: 100%;
-            padding: 16px;
-            background: #0f0f1a;
-            border: 2px solid rgba(102,126,234,0.3);
-            border-radius: 16px;
-            color: white;
-            font-size: 1.2rem;
+        /* Kod ekrani */
+        .code-screen {
+            background: rgba(0,0,0,0.5);
+            margin: 25px 20px;
+            padding: 20px;
+            border-radius: 30px;
             text-align: center;
-            letter-spacing: 4px;
+            border: 2px solid rgba(102,126,234,0.5);
+        }
+
+        .code-digits {
+            font-size: 2.5rem;
+            font-weight: 800;
+            letter-spacing: 15px;
+            color: white;
             font-family: monospace;
-            outline: none;
-            transition: all 0.3s;
+            text-shadow: 0 0 10px rgba(102,126,234,0.5);
         }
 
-        .code-input-field:focus {
-            border-color: #667eea;
-            box-shadow: 0 0 10px rgba(102,126,234,0.3);
+        .code-hint {
+            font-size: 0.7rem;
+            color: rgba(255,255,255,0.5);
+            margin-top: 10px;
         }
 
-        .code-input-field::placeholder {
-            color: rgba(255,255,255,0.3);
-            letter-spacing: 0;
+        /* Raqamli klaviatura */
+        .numpad {
+            padding: 0 20px 20px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+
+        .numpad-btn {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 60px;
+            padding: 18px;
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: white;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .numpad-btn:active {
+            background: #667eea;
+            transform: scale(0.95);
+        }
+
+        .numpad-empty {
+            background: transparent;
+            border: none;
+            pointer-events: none;
+        }
+
+        /* Action buttons */
+        .action-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            padding: 0 20px 20px;
+        }
+
+        .action-clear {
+            background: rgba(220,53,69,0.8);
+            border: none;
+            border-radius: 60px;
+            padding: 14px;
+            color: white;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .action-clear:active {
+            background: #dc3545;
+            transform: scale(0.95);
+        }
+
+        .action-delete {
+            background: rgba(255,193,7,0.8);
+            border: none;
+            border-radius: 60px;
+            padding: 14px;
+            color: #333;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .action-delete:active {
+            background: #ffc107;
+            transform: scale(0.95);
         }
 
         .watch-submit {
-            width: 100%;
+            width: calc(100% - 40px);
+            margin: 0 20px 25px;
             padding: 16px;
             background: linear-gradient(135deg, #667eea, #764ba2);
             border: none;
-            border-radius: 50px;
+            border-radius: 60px;
             color: white;
             font-size: 1rem;
             font-weight: 600;
@@ -484,6 +548,25 @@
             transform: scale(0.98);
         }
 
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.2);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            z-index: 210;
+            backdrop-filter: blur(5px);
+        }
+
+        /* Film loading */
         .film-loading {
             position: fixed;
             top: 0;
@@ -521,29 +604,15 @@
             font-size: 1rem;
         }
 
-        .modal-close {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(255,255,255,0.2);
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 1.2rem;
-            cursor: pointer;
-            z-index: 210;
-            backdrop-filter: blur(5px);
-        }
-
-        @media (max-width: 768px) {
-            .code-btn { padding: 12px 16px; }
-            .code-btn-icon { width: 40px; height: 40px; font-size: 1rem; }
-            .code-btn-text h4 { font-size: 0.85rem; }
-            .code-btn-text p { font-size: 0.65rem; }
+        @media (max-width: 480px) {
+            .code-digits {
+                font-size: 1.8rem;
+                letter-spacing: 10px;
+            }
+            .numpad-btn {
+                padding: 14px;
+                font-size: 1.5rem;
+            }
         }
     </style>
 </head>
@@ -592,35 +661,62 @@
     {% endif %}
 </div>
 
-<!-- CODE BUTTON -->
-<div class="code-button-container" id="codeButtonContainer" style="display: none;">
-    <button class="code-btn" id="openModalBtn">
-        <div class="code-btn-left">
-            <div class="code-btn-icon"><i class="fas fa-film"></i></div>
-            <div class="code-btn-text">
-                <h4>🎬 Film kodini kiriting</h4>
-                <p>4 xonali kod orqali film tomosha qiling</p>
-            </div>
+<!-- CHIROYLI KOD KIRITISH TUGMASI -->
+<div class="code-btn" id="openModalBtn">
+    <div class="code-btn-left">
+        <div class="code-btn-icon">
+            <i class="fas fa-film"></i>
         </div>
-        <div class="code-btn-arrow"><i class="fas fa-chevron-up"></i></div>
-    </button>
+        <div class="code-btn-text">
+            <h4>Film kodini kiriting</h4>
+            <p>4 xonali kod orqali film tomosha qiling</p>
+        </div>
+    </div>
+    <div class="code-btn-arrow">
+        <i class="fas fa-chevron-up"></i>
+    </div>
 </div>
 
-<!-- MODAL -->
+<!-- CHIROYLI MODAL (Raqamli klaviatura) -->
 <div class="modal-overlay" id="modalOverlay">
-    <div class="modal-close" id="closeModalBtn"><i class="fas fa-times"></i></div>
+    <div class="modal-close" id="closeModalBtn">
+        <i class="fas fa-times"></i>
+    </div>
     <div class="modal-container">
         <div class="modal-header">
             <h3>🎬 Film kodini kiriting</h3>
             <p>4 xonali kodni kiriting va tomosha qiling</p>
         </div>
-        <div class="modal-body">
-            <div class="code-input-group">
-                <label class="code-input-label">Film kodi</label>
-                <input type="text" class="code-input-field" id="filmKod" placeholder="Masalan: 1234" maxlength="4" inputmode="numeric" pattern="[0-9]*">
-            </div>
-            <button class="watch-submit" id="watchSubmitBtn"><i class="fas fa-play"></i> Tomosha qilish</button>
+
+        <div class="code-screen">
+            <div class="code-digits" id="codeDisplay">____</div>
+            <div class="code-hint">4 xonali kod</div>
         </div>
+
+        <!-- Raqamli klaviatura -->
+        <div class="numpad" id="numpad">
+            <div class="numpad-btn" data-value="1">1</div>
+            <div class="numpad-btn" data-value="2">2</div>
+            <div class="numpad-btn" data-value="3">3</div>
+            <div class="numpad-btn" data-value="4">4</div>
+            <div class="numpad-btn" data-value="5">5</div>
+            <div class="numpad-btn" data-value="6">6</div>
+            <div class="numpad-btn" data-value="7">7</div>
+            <div class="numpad-btn" data-value="8">8</div>
+            <div class="numpad-btn" data-value="9">9</div>
+            <div class="numpad-btn" data-value=""></div>
+            <div class="numpad-btn" data-value="0">0</div>
+            <div class="numpad-btn" data-value=""></div>
+        </div>
+
+        <div class="action-buttons">
+            <div class="action-clear" id="clearBtn">O'chirish</div>
+            <div class="action-delete" id="backspaceBtn"><i class="fas fa-backspace"></i> O'chir</div>
+        </div>
+
+        <button class="watch-submit" id="watchSubmitBtn">
+            <i class="fas fa-play"></i> Tomosha qilish
+        </button>
     </div>
 </div>
 
@@ -635,13 +731,11 @@
     const startBtn = document.getElementById('startBtn');
     const shortsContainer = document.getElementById('shortsContainer');
     const scrollInstruction = document.getElementById('scrollInstruction');
-    const codeButtonContainer = document.getElementById('codeButtonContainer');
     let allVideos = [];
 
     startBtn.addEventListener('click', () => {
         preloader.classList.add('hide');
         shortsContainer.style.display = 'block';
-        codeButtonContainer.style.display = 'block';
         getAllVideos();
         setTimeout(() => { scrollInstruction.classList.add('hide'); }, 4000);
         setTimeout(() => { if (allVideos.length > 0) playVideo(0); }, 300);
@@ -682,17 +776,8 @@
             const newIndex = getCurrentIndex();
             if (newIndex !== currentIndex && newIndex >= 0 && newIndex < allVideos.length) {
                 playVideo(newIndex);
-                if (!scrollInstruction.classList.contains('hide')) scrollInstruction.classList.add('hide');
             }
         }, 50);
-    });
-
-    let touchStartY = 0;
-    shortsContainer.addEventListener('touchstart', (e) => { touchStartY = e.touches[0].clientY; });
-    shortsContainer.addEventListener('touchmove', (e) => {
-        if (touchStartY - e.touches[0].clientY > 30 && !scrollInstruction.classList.contains('hide')) {
-            scrollInstruction.classList.add('hide');
-        }
     });
 
     function toggleSound(btn) {
@@ -707,65 +792,103 @@
         setTimeout(() => btn.innerHTML = '❤️', 1000);
     }
 
-    // ============ KOD KIRITISH ============
+    // ============ 4 XONALI KOD KIRITISH (AVTOMATIK QIDIRISH) ============
+    let currentCode = '';
+    const maxCodeLength = 4;
+    const codeDisplay = document.getElementById('codeDisplay');
     const modalOverlay = document.getElementById('modalOverlay');
     const filmLoading = document.getElementById('filmLoading');
     const filmKodInput = document.getElementById('filmKod');
-    const watchSubmitBtn = document.getElementById('watchSubmitBtn');
     const openModalBtn = document.getElementById('openModalBtn');
     const closeModalBtn = document.getElementById('closeModalBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const backspaceBtn = document.getElementById('backspaceBtn');
+    const watchSubmitBtn = document.getElementById('watchSubmitBtn');
+
+    function updateDisplay() {
+        const displayText = currentCode.padEnd(maxCodeLength, '_');
+        codeDisplay.textContent = displayText;
+        
+        // 4 xonali kod to'lganda avtomatik qidirish
+        if (currentCode.length === maxCodeLength) {
+            submitCode();
+        }
+    }
+
+    function addDigit(digit) {
+        if (currentCode.length < maxCodeLength) {
+            currentCode += digit;
+            updateDisplay();
+        }
+    }
+
+    function clearCode() {
+        currentCode = '';
+        updateDisplay();
+    }
+
+    function backspace() {
+        currentCode = currentCode.slice(0, -1);
+        updateDisplay();
+    }
 
     function submitCode() {
-        let kod = filmKodInput.value.trim();
-        if (kod.length === 0) {
-            alert('Iltimos, film kodini kiriting!');
+        if (currentCode.length !== maxCodeLength) {
+            alert('4 xonali kodni to\'liq kiriting!');
             return;
         }
-        kod = kod.toUpperCase();
+        
+        const kod = currentCode;
         filmLoading.classList.add('show');
         
         fetch(`/api/check/${kod}`)
             .then(response => {
                 if (response.ok) return response.json();
-                else throw new Error('NOT_FOUND');
+                throw new Error('NOT_FOUND');
             })
             .then(data => {
-                if (data.exists) window.location.href = `/film/${kod}`;
-                else throw new Error('NOT_FOUND');
+                if (data.exists) {
+                    window.location.href = `/film/${kod}`;
+                } else {
+                    throw new Error('NOT_FOUND');
+                }
             })
             .catch(err => {
                 filmLoading.classList.remove('show');
-                if (err.message === 'NOT_FOUND') alert(`"${kod}" kodli film topilmadi!`);
-                else alert('Xatolik yuz berdi!');
-                filmKodInput.value = '';
-                filmKodInput.focus();
+                alert(`"${kod}" kodli film topilmadi!`);
+                clearCode();
             });
     }
 
-    openModalBtn.addEventListener('click', () => {
-        modalOverlay.classList.add('show');
-        filmKodInput.value = '';
-        setTimeout(() => filmKodInput.focus(), 300);
-    });
-    closeModalBtn.addEventListener('click', () => {
-        modalOverlay.classList.remove('show');
-        filmKodInput.value = '';
-    });
-    modalOverlay.addEventListener('click', (e) => {
-        if (e.target === modalOverlay) {
-            modalOverlay.classList.remove('show');
-            filmKodInput.value = '';
+    // Numpad tugmalari
+    document.querySelectorAll('.numpad-btn').forEach(btn => {
+        const val = btn.getAttribute('data-value');
+        if (val && val.trim() !== '') {
+            btn.addEventListener('click', () => addDigit(val));
         }
     });
-    watchSubmitBtn.addEventListener('click', submitCode);
-    filmKodInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') submitCode(); });
 
-    // ============ SERVICE WORKER ============
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/static/sw.js').catch(err => console.log('SW error:', err));
-        });
+    clearBtn.addEventListener('click', clearCode);
+    backspaceBtn.addEventListener('click', backspace);
+    watchSubmitBtn.addEventListener('click', submitCode);
+
+    // Modal ochish/yopish
+    openModalBtn.addEventListener('click', () => {
+        modalOverlay.classList.add('show');
+        clearCode();
+    });
+
+    function closeModal() {
+        modalOverlay.classList.remove('show');
+        clearCode();
     }
+
+    closeModalBtn.addEventListener('click', closeModal);
+    modalOverlay.addEventListener('click', (e) => {
+        if (e.target === modalOverlay) {
+            closeModal();
+        }
+    });
 
     // ============ INITIALIZATION ============
     window.addEventListener('load', () => {
