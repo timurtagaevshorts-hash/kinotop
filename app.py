@@ -3,7 +3,6 @@ import sqlite3
 from flask import Flask, render_template, request, redirect, url_for, send_file, send_from_directory, jsonify, session, Response
 from datetime import datetime
 from functools import wraps
-import mimetypes
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'kinotop-secret-key-2024')
@@ -11,7 +10,7 @@ app.secret_key = os.environ.get('SECRET_KEY', 'kinotop-secret-key-2024')
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 app.config['UPLOAD_FOLDER_FILMS'] = os.path.join(BASE_DIR, 'static/uploads/films')
 app.config['UPLOAD_FOLDER_SHORTS'] = os.path.join(BASE_DIR, 'static/uploads/shorts')
-app.config['MAX_CONTENT_LENGTH'] = 4 * 1024 * 1024 * 1024  # 4GB
+app.config['MAX_CONTENT_LENGTH'] = 4 * 1024 * 1024 * 1024
 
 ALLOWED_VIDEO = {'mp4', 'avi', 'mkv', 'mov', 'webm', 'm4v'}
 ALLOWED_IMAGE = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
@@ -30,7 +29,6 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# ============ DATABASE ============
 def init_db():
     db_path = os.path.join(BASE_DIR, 'database.db')
     conn = sqlite3.connect(db_path)
@@ -74,10 +72,9 @@ init_db()
 def allowed_file(filename, allowed):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed
 
-# ============ ULTRA FAST INSTANT VIDEO STREAMING ============
+# ============ OPTIMIZED STREAMING WITH CACHE SUPPORT ============
 @app.route('/stream/<kod>')
 def stream_video(kod):
-    """Video streaming - darhol boshlanadi, jonli efir kabi"""
     db_path = os.path.join(BASE_DIR, 'database.db')
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
@@ -96,8 +93,7 @@ def stream_video(kod):
     file_size = os.path.getsize(video_path)
     range_header = request.headers.get('Range', None)
     
-    def generate_instant(video_path, start, length, chunk_size=256*1024):
-        """Instant streaming - 256KB chunk bilan darhol boshlanadi"""
+    def generate_chunked(video_path, start, length, chunk_size=256*1024):
         with open(video_path, "rb") as f:
             f.seek(start)
             sent = 0
@@ -109,23 +105,21 @@ def stream_video(kod):
                 yield chunk
     
     if not range_header:
-        # BIRINCHI 128KB DARHOL (video 0.3 soniyada boshlanadi)
-        first_chunk = 128 * 1024
+        first_chunk = 256 * 1024
         response = Response(
-            generate_instant(video_path, 0, min(first_chunk, file_size)), 
+            generate_chunked(video_path, 0, min(first_chunk, file_size)), 
             206, 
             mimetype="video/mp4"
         )
         response.headers["Content-Range"] = f"bytes 0-{min(first_chunk, file_size)-1}/{file_size}"
         response.headers["Accept-Ranges"] = "bytes"
         response.headers["Content-Length"] = str(min(first_chunk, file_size))
-        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Cache-Control"] = "public, max-age=86400"
         response.headers["X-Accel-Buffering"] = "no"
         response.headers["Content-Type"] = "video/mp4"
         response.headers["Connection"] = "keep-alive"
         return response
     
-    # Range qo'llab-quvvatlash (oldinga/orqaga o'tish)
     byte1, byte2 = 0, None
     match = range_header.replace("bytes=", "").split("-")
     if match[0]:
@@ -137,18 +131,17 @@ def stream_video(kod):
     if byte2 is not None:
         length = byte2 - byte1 + 1
     
-    response = Response(generate_instant(video_path, byte1, length), 206, mimetype="video/mp4")
+    response = Response(generate_chunked(video_path, byte1, length), 206, mimetype="video/mp4")
     response.headers.add("Content-Range", f"bytes {byte1}-{byte1 + length - 1}/{file_size}")
     response.headers.add("Accept-Ranges", "bytes")
     response.headers.add("Content-Length", str(length))
-    response.headers.add("Cache-Control", "no-cache, no-store, must-revalidate")
+    response.headers.add("Cache-Control", "public, max-age=86400")
     response.headers.add("X-Accel-Buffering", "no")
     response.headers.add("Connection", "keep-alive")
     return response
 
 @app.route('/stream-shorts/<int:id>')
 def stream_shorts(id):
-    """Shorts streaming - darhol boshlanadi"""
     db_path = os.path.join(BASE_DIR, 'database.db')
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
@@ -164,19 +157,17 @@ def stream_shorts(id):
     if not os.path.exists(video_path):
         return "Video topilmadi", 404
     
-    def generate_instant():
+    def generate():
         with open(video_path, "rb") as f:
-            first_chunk = f.read(128 * 1024)
-            yield first_chunk
             while True:
-                chunk = f.read(256 * 1024)
+                chunk = f.read(128 * 1024)
                 if not chunk:
                     break
                 yield chunk
     
-    response = Response(generate_instant(), 200, mimetype="video/mp4")
+    response = Response(generate(), 200, mimetype="video/mp4")
     response.headers["Accept-Ranges"] = "bytes"
-    response.headers["Cache-Control"] = "no-cache, no-store"
+    response.headers["Cache-Control"] = "public, max-age=86400"
     response.headers["X-Accel-Buffering"] = "no"
     return response
 
@@ -237,11 +228,15 @@ def check_film(kod):
     db_path = os.path.join(BASE_DIR, 'database.db')
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
-    c.execute("SELECT id, nomi FROM films WHERE kod = ?", (kod.upper(),))
+    c.execute("SELECT id, nomi, fayl_nomi FROM films WHERE kod = ?", (kod.upper(),))
     row = c.fetchone()
     conn.close()
     if row:
-        return jsonify({"exists": True, "nomi": row[1]}), 200
+        return jsonify({
+            "exists": True, 
+            "nomi": row[1],
+            "fayl_nomi": row[2]
+        }), 200
     return jsonify({"exists": False}), 404
 
 # ============ PUBLIC ROUTES ============
@@ -267,7 +262,6 @@ def film(kod):
     if not row:
         return "Film topilmadi!", 404
     
-    # Ko'rishlar sonini oshirish
     conn2 = sqlite3.connect(db_path)
     c2 = conn2.cursor()
     c2.execute("UPDATE films SET korishlar = korishlar + 1 WHERE kod = ?", (kod.upper(),))
@@ -336,7 +330,7 @@ def admin_film():
         return "Fayl tanlanmagan!", 400
     
     if not allowed_file(fayl.filename, ALLOWED_VIDEO):
-        return "Video fayl kerak! (mp4, avi, mkv, mov, webm)", 400
+        return "Video fayl kerak!", 400
     
     ext = fayl.filename.rsplit('.', 1)[1].lower()
     yangi_nom = f"{kod}.{ext}"
@@ -454,7 +448,6 @@ def admin_shorts_delete(id):
     conn.close()
     return redirect(url_for('admin'))
 
-# ============ ERROR HANDLERS ============
 @app.errorhandler(404)
 def not_found(error):
     return "<h1>404 - Sahifa topilmadi!</h1><a href='/'>Bosh sahifaga qaytish</a>", 404
@@ -463,18 +456,12 @@ def not_found(error):
 def internal_error(error):
     return "<h1>500 - Server xatosi!</h1><a href='/'>Bosh sahifaga qaytish</a>", 500
 
-# ============ STATIC FILES ============
-@app.route('/static/uploads/<path:filename>')
-def serve_upload(filename):
-    return send_from_directory(os.path.join(BASE_DIR, 'static/uploads'), filename)
-
-# ============ MAIN ============
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))
     print("""
     ╔══════════════════════════════════════════════════════════════════════════╗
     ║                                                                          ║
-    ║        🎬 KINOTOP - ULTRA FAST INSTANT STREAMING 🎬                      ║
+    ║        🎬 KINOTOP - PROFESSIONAL EDITION 🎬                              ║
     ║                                                                          ║
     ╠══════════════════════════════════════════════════════════════════════════╣
     ║                                                                          ║
@@ -482,13 +469,12 @@ if __name__ == '__main__':
     ║  🔐 ADMIN:       /admin                                                  ║
     ║  📝 ADMIN PASS:  admin123                                                ║
     ║                                                                          ║
-    ║  ⚡ INSTANT FEATURES:                                                     ║
-    ║     ✓ First chunk: 128KB (0.2 seconds)                                  ║
-    ║     ✓ Chunk size: 256KB                                                 ║
-    ║     ✓ No buffering delay                                                ║
-    ║     ✓ X-Accel-Buffering: no                                             ║
-    ║     ✓ Keep-Alive connection                                             ║
-    ║     ✓ Video starts IMMEDIATELY                                          ║
+    ║  ⚡ FEATURES:                                                             ║
+    ║     ✓ Loading animation (3-5 seconds)                                   ║
+    ║     ✓ Play button to start                                              ║
+    ║     ✓ Progressive streaming                                            ║
+    ║     ✓ Cache support (resume from saved position)                        ║
+    ║     ✓ Fast playback                                                     ║
     ║                                                                          ║
     ╚══════════════════════════════════════════════════════════════════════════╝
     """.format(port))
