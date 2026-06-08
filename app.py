@@ -13,7 +13,10 @@ UPLOAD_FOLDER_POSTERS = os.path.join(BASE_DIR, 'static/uploads/posters')
 
 os.makedirs(UPLOAD_FOLDER_POSTERS, exist_ok=True)
 
-ADMIN_PASSWORD = 'admin123'
+# ============ ADMIN PAROLI O'ZGARTIRILDI ============
+ADMIN_PASSWORD = 'Betmilion1'
+# ===================================================
+
 ALLOWED_IMAGE = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
 # ============ VIDEO PLATFORMALARINI ANIQLASH ============
@@ -36,20 +39,18 @@ def get_video_info(url):
             return {
                 'platform': 'youtube',
                 'id': video_id,
-                'embed_url': f'https://www.youtube.com/embed/{video_id}?autoplay=1&rel=0',
+                'embed_url': f'https://www.youtube.com/embed/{video_id}?autoplay=1&rel=0&modestbranding=1&showinfo=0&controls=1&fs=1',
                 'thumbnail': f'https://img.youtube.com/vi/{video_id}/maxresdefault.jpg'
             }
     
     # VK Video
     vk_patterns = [
         r'(?:vk\.com\/video-?\d+_\d+)',
-        r'(?:vk\.com\/video_ext\.php\?oid=-?\d+&id=\d+)',
-        r'(?:vk\.com\/video-?\d+_\d+)'
+        r'(?:vk\.com\/video_ext\.php\?oid=-?\d+&id=\d+)'
     ]
     for pattern in vk_patterns:
         match = re.search(pattern, url)
         if match:
-            # VK embed URL
             video_id = url.split('/')[-1] if 'video' in url else None
             if video_id:
                 parts = video_id.split('_')
@@ -62,7 +63,7 @@ def get_video_info(url):
                         'thumbnail': None
                     }
     
-    # UzMovi (uzmovi.com)
+    # UzMovi
     uzmovi_patterns = [
         r'(?:uzmovi\.com\/)([a-zA-Z0-9_-]+)',
         r'(?:uzmovi\.uz\/)([a-zA-Z0-9_-]+)'
@@ -142,7 +143,7 @@ def get_short_info(url):
         return {
             'platform': 'youtube',
             'id': video_id,
-            'embed_url': f'https://www.youtube.com/embed/{video_id}?autoplay=1&rel=0',
+            'embed_url': f'https://www.youtube.com/embed/{video_id}?autoplay=1&rel=0&modestbranding=1&showinfo=0&controls=0&fs=0',
             'thumbnail': f'https://img.youtube.com/vi/{video_id}/maxresdefault.jpg'
         }
     
@@ -298,7 +299,6 @@ def admin_add_film():
     if not video_info:
         return "Noto'g'ri video URL! YouTube, VK, UzMovi, Instagram, Vimeo, DailyMotion qo'llab-quvvatlanadi.", 400
     
-    # Poster rasm
     rasm_nomi = None
     if 'rasm' in request.files:
         rasm = request.files['rasm']
@@ -398,7 +398,7 @@ if __name__ == '__main__':
     ║                                                                          ║
     ║  🌐 PORT:        {}                                                       ║
     ║  🔐 ADMIN:       /admin                                                  ║
-    ║  📝 ADMIN PASS:  admin123                                                ║
+    ║  📝 ADMIN PASS:  Betmilion1                                              ║
     ║                                                                          ║
     ║  ⚡ QO'LLAB-QUVVATLANADIGAN PLATFORMALAR:                                 ║
     ║     ✓ YouTube / YouTube Shorts                                          ║
