@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Kinotop | Shorts va kinolar</title>
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#667eea">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
@@ -101,10 +105,10 @@
             100% { box-shadow: 0 0 0 0 rgba(102,126,234,0); }
         }
 
-        /* ============ SCROLL INSTRUCTION ANIMATION ============ */
+        /* ============ SCROLL INSTRUCTION ============ */
         .scroll-instruction {
             position: absolute;
-            bottom: 120px;
+            bottom: 150px;
             left: 0;
             right: 0;
             text-align: center;
@@ -180,7 +184,6 @@
             left: 0;
         }
 
-        /* Video info overlay */
         .short-info {
             position: absolute;
             bottom: 100px;
@@ -194,7 +197,7 @@
 
         .short-title {
             color: white;
-            font-size: 1.1rem;
+            font-size: 1rem;
             font-weight: 700;
             margin-bottom: 5px;
             text-shadow: 0 1px 3px rgba(0,0,0,0.5);
@@ -202,11 +205,10 @@
 
         .short-desc {
             color: rgba(255,255,255,0.8);
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             text-shadow: 0 1px 2px rgba(0,0,0,0.5);
         }
 
-        /* Right side buttons */
         .overlay-buttons {
             position: absolute;
             right: 12px;
@@ -220,8 +222,8 @@
         .overlay-btn {
             background: rgba(0,0,0,0.5);
             backdrop-filter: blur(8px);
-            width: 44px;
-            height: 44px;
+            width: 42px;
+            height: 42px;
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -236,22 +238,6 @@
             transform: scale(0.9);
         }
 
-        /* Download button */
-        .download-short {
-            background: rgba(0,0,0,0.5);
-            backdrop-filter: blur(8px);
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 1.2rem;
-            cursor: pointer;
-        }
-
-        /* Loading indicator */
         .short-loading {
             position: absolute;
             top: 50%;
@@ -310,7 +296,6 @@
             font-size: 1rem;
         }
 
-        /* No shorts message */
         .no-shorts {
             width: 100%;
             height: 100vh;
@@ -329,71 +314,75 @@
             opacity: 0.7;
         }
 
-        /* Code bar */
-        .code-bar {
+        /* ============ CODE BUTTON ============ */
+        .code-button-container {
             position: fixed;
             bottom: 0;
             left: 0;
             right: 0;
-            background: rgba(0,0,0,0.9);
-            backdrop-filter: blur(10px);
-            border-top: 1px solid rgba(255,255,255,0.1);
             z-index: 100;
-            transform: translateY(0);
-            transition: transform 0.3s ease;
+            padding: 12px 20px 20px;
+            background: linear-gradient(to top, rgba(0,0,0,0.95), transparent);
         }
 
-        .code-bar.hidden {
-            transform: translateY(100%);
-        }
-
-        .code-button {
+        .code-btn {
             width: 100%;
-            padding: 16px 20px;
-            background: transparent;
+            background: linear-gradient(135deg, #667eea, #764ba2);
             border: none;
+            border-radius: 60px;
+            padding: 16px 20px;
             display: flex;
             align-items: center;
             justify-content: space-between;
             cursor: pointer;
+            transition: transform 0.2s;
+            box-shadow: 0 4px 15px rgba(102,126,234,0.3);
         }
 
-        .code-button-left {
+        .code-btn:active {
+            transform: scale(0.98);
+        }
+
+        .code-btn-left {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 14px;
         }
 
-        .code-icon {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            width: 44px;
-            height: 44px;
-            border-radius: 12px;
+        .code-btn-icon {
+            width: 48px;
+            height: 48px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.2rem;
+            font-size: 1.3rem;
         }
 
-        .code-text h4 {
+        .code-btn-text {
+            text-align: left;
+        }
+
+        .code-btn-text h4 {
             color: white;
-            font-size: 0.9rem;
-            font-weight: 600;
+            font-size: 1rem;
+            font-weight: 700;
             margin-bottom: 2px;
         }
 
-        .code-text p {
-            color: rgba(255,255,255,0.5);
-            font-size: 0.7rem;
+        .code-btn-text p {
+            color: rgba(255,255,255,0.7);
+            font-size: 0.75rem;
         }
 
-        .code-arrow {
-            color: rgba(255,255,255,0.5);
-            font-size: 1rem;
-            transition: transform 0.3s;
+        .code-btn-arrow {
+            color: white;
+            font-size: 1.2rem;
+            opacity: 0.8;
         }
 
-        /* Modal */
+        /* ============ MODAL ============ */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -416,87 +405,66 @@
             width: 90%;
             max-width: 400px;
             background: #1a1a2e;
-            border-radius: 20px;
+            border-radius: 28px;
             overflow: hidden;
             border: 1px solid rgba(102,126,234,0.3);
         }
 
         .modal-header {
-            padding: 20px;
+            padding: 25px 20px;
             background: linear-gradient(135deg, #667eea, #764ba2);
             text-align: center;
         }
 
         .modal-header h3 {
             color: white;
-            font-size: 1.2rem;
+            font-size: 1.3rem;
+            margin-bottom: 5px;
+        }
+
+        .modal-header p {
+            color: rgba(255,255,255,0.8);
+            font-size: 0.8rem;
         }
 
         .modal-body {
             padding: 25px 20px;
         }
 
-        .code-display {
-            background: #0f0f1a;
-            border-radius: 12px;
-            padding: 15px;
-            text-align: center;
-            margin-bottom: 20px;
+        .code-input-group {
+            margin-bottom: 25px;
         }
 
-        .code-display span {
-            font-size: 1.8rem;
-            letter-spacing: 8px;
+        .code-input-label {
+            color: rgba(255,255,255,0.6);
+            font-size: 0.8rem;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .code-input-field {
+            width: 100%;
+            padding: 16px;
+            background: #0f0f1a;
+            border: 2px solid rgba(102,126,234,0.3);
+            border-radius: 16px;
             color: white;
+            font-size: 1.2rem;
+            text-align: center;
+            letter-spacing: 4px;
             font-family: monospace;
+            outline: none;
+            transition: all 0.3s;
         }
 
-        .numpad {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 12px;
-            margin-bottom: 20px;
+        .code-input-field:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 10px rgba(102,126,234,0.3);
         }
 
-        .numpad-btn {
-            background: #0f0f1a;
-            border: 1px solid rgba(102,126,234,0.3);
-            border-radius: 12px;
-            padding: 18px;
-            font-size: 1.3rem;
-            color: white;
-            text-align: center;
-            cursor: pointer;
-        }
-
-        .numpad-btn:active {
-            background: #667eea;
-            transform: scale(0.95);
-        }
-
-        .numpad-actions {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            margin-bottom: 15px;
-        }
-
-        .action-btn {
-            padding: 14px;
-            border-radius: 12px;
-            text-align: center;
-            cursor: pointer;
-            font-weight: 600;
-        }
-
-        .action-btn.clear {
-            background: #dc3545;
-            color: white;
-        }
-
-        .action-btn.backspace {
-            background: #ffc107;
-            color: #333;
+        .code-input-field::placeholder {
+            color: rgba(255,255,255,0.3);
+            letter-spacing: 0;
         }
 
         .watch-submit {
@@ -504,10 +472,16 @@
             padding: 16px;
             background: linear-gradient(135deg, #667eea, #764ba2);
             border: none;
-            border-radius: 12px;
+            border-radius: 50px;
             color: white;
+            font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .watch-submit:active {
+            transform: scale(0.98);
         }
 
         .film-loading {
@@ -546,6 +520,31 @@
             color: white;
             font-size: 1rem;
         }
+
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.2);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            z-index: 210;
+            backdrop-filter: blur(5px);
+        }
+
+        @media (max-width: 768px) {
+            .code-btn { padding: 12px 16px; }
+            .code-btn-icon { width: 40px; height: 40px; font-size: 1rem; }
+            .code-btn-text h4 { font-size: 0.85rem; }
+            .code-btn-text p { font-size: 0.65rem; }
+        }
     </style>
 </head>
 <body>
@@ -560,16 +559,13 @@
     </div>
 </div>
 
-<!-- SCROLL INSTRUCTION (Animatsiya) -->
+<!-- SCROLL INSTRUCTION -->
 <div class="scroll-instruction" id="scrollInstruction">
     <div class="scroll-arrow"></div>
     <div class="scroll-text">👆 Shortslarni ko'rish uchun yuqoriga suring</div>
 </div>
 
-<div class="logo">
-    <span>🎬 KINOTOP</span>
-</div>
-
+<div class="logo"><span>🎬 KINOTOP</span></div>
 <a href="/admin" class="admin-btn">🔐</a>
 
 <!-- SHORTS CONTAINER -->
@@ -588,68 +584,49 @@
             <div class="overlay-buttons">
                 <div class="overlay-btn sound-btn" data-id="{{ short.id }}">🔇</div>
                 <div class="overlay-btn like-btn">❤️</div>
-                <div class="download-short" data-id="{{ short.id }}" data-sarlavha="{{ short.sarlavha }}">📥</div>
             </div>
         </div>
         {% endfor %}
     {% else %}
-        <div class="no-shorts">
-            <p>📱 Hozircha shortslar yo'q</p>
-            <p style="font-size: 0.8rem;">Admin panel orqali video qo'shing</p>
-        </div>
+        <div class="no-shorts"><p>📱 Hozircha shortslar yo'q</p></div>
     {% endif %}
 </div>
 
-<!-- CODE BAR -->
-<div class="code-bar" id="codeBar">
-    <button class="code-button" id="openModalBtn">
-        <div class="code-button-left">
-            <div class="code-icon">🎬</div>
-            <div class="code-text">
-                <h4>4 xonali kodni kiriting</h4>
-                <p>Filmni tomosha qilish</p>
+<!-- CODE BUTTON -->
+<div class="code-button-container" id="codeButtonContainer" style="display: none;">
+    <button class="code-btn" id="openModalBtn">
+        <div class="code-btn-left">
+            <div class="code-btn-icon"><i class="fas fa-film"></i></div>
+            <div class="code-btn-text">
+                <h4>🎬 Film kodini kiriting</h4>
+                <p>4 xonali kod orqali film tomosha qiling</p>
             </div>
         </div>
-        <div class="code-arrow" id="codeArrow">▲</div>
+        <div class="code-btn-arrow"><i class="fas fa-chevron-up"></i></div>
     </button>
 </div>
 
 <!-- MODAL -->
 <div class="modal-overlay" id="modalOverlay">
+    <div class="modal-close" id="closeModalBtn"><i class="fas fa-times"></i></div>
     <div class="modal-container">
         <div class="modal-header">
-            <h3>🎬 4 xonali kod</h3>
+            <h3>🎬 Film kodini kiriting</h3>
+            <p>4 xonali kodni kiriting va tomosha qiling</p>
         </div>
         <div class="modal-body">
-            <div class="code-display">
-                <span id="codeDisplay">____</span>
+            <div class="code-input-group">
+                <label class="code-input-label">Film kodi</label>
+                <input type="text" class="code-input-field" id="filmKod" placeholder="Masalan: 1234" maxlength="4" inputmode="numeric" pattern="[0-9]*">
             </div>
-            <div class="numpad">
-                <div class="numpad-btn" data-value="1">1</div>
-                <div class="numpad-btn" data-value="2">2</div>
-                <div class="numpad-btn" data-value="3">3</div>
-                <div class="numpad-btn" data-value="4">4</div>
-                <div class="numpad-btn" data-value="5">5</div>
-                <div class="numpad-btn" data-value="6">6</div>
-                <div class="numpad-btn" data-value="7">7</div>
-                <div class="numpad-btn" data-value="8">8</div>
-                <div class="numpad-btn" data-value="9">9</div>
-                <div class="numpad-btn" data-value=""></div>
-                <div class="numpad-btn" data-value="0">0</div>
-                <div class="numpad-btn" data-value=""></div>
-            </div>
-            <div class="numpad-actions">
-                <div class="action-btn clear" id="clearBtn">O'chirish</div>
-                <div class="action-btn backspace" id="backspaceBtn">⌫</div>
-            </div>
-            <button class="watch-submit" id="watchSubmitBtn">🎬 Tomosha qilish</button>
+            <button class="watch-submit" id="watchSubmitBtn"><i class="fas fa-play"></i> Tomosha qilish</button>
         </div>
     </div>
 </div>
 
 <div class="film-loading" id="filmLoading">
     <div class="film-loading-spinner"></div>
-    <div class="film-loading-text">Kino qidirilmoqda...</div>
+    <div class="film-loading-text">🎬 Kino qidirilmoqda...</div>
 </div>
 
 <script>
@@ -658,26 +635,19 @@
     const startBtn = document.getElementById('startBtn');
     const shortsContainer = document.getElementById('shortsContainer');
     const scrollInstruction = document.getElementById('scrollInstruction');
-    const codeArrow = document.getElementById('codeArrow');
-    const codeBar = document.getElementById('codeBar');
+    const codeButtonContainer = document.getElementById('codeButtonContainer');
+    let allVideos = [];
 
     startBtn.addEventListener('click', () => {
         preloader.classList.add('hide');
         shortsContainer.style.display = 'block';
-        
-        // Scroll instruction ni 3 soniyadan keyin yashirish
-        setTimeout(() => {
-            scrollInstruction.classList.add('hide');
-        }, 4000);
-        
-        // Birinchi videoni o'ynatish
-        setTimeout(() => {
-            if (allVideos.length > 0) playVideo(0);
-        }, 300);
+        codeButtonContainer.style.display = 'block';
+        getAllVideos();
+        setTimeout(() => { scrollInstruction.classList.add('hide'); }, 4000);
+        setTimeout(() => { if (allVideos.length > 0) playVideo(0); }, 300);
     });
 
     // ============ SHORTS PLAYER ============
-    let allVideos = [];
     let currentIndex = 0;
     let currentVideo = null;
 
@@ -689,25 +659,20 @@
         allVideos.forEach((item, i) => {
             const video = item.querySelector('video');
             const soundBtn = item.querySelector('.sound-btn');
-            video.pause();
-            video.muted = true;
+            if (video) { video.pause(); video.muted = true; }
             if (soundBtn) soundBtn.innerHTML = '🔇';
         });
-        
         if (allVideos[index]) {
             currentVideo = allVideos[index].querySelector('video');
             const soundBtn = allVideos[index].querySelector('.sound-btn');
-            currentVideo.muted = false;
-            currentVideo.play().catch(e => console.log());
+            if (currentVideo) { currentVideo.muted = false; currentVideo.play().catch(e => console.log()); }
             if (soundBtn) soundBtn.innerHTML = '🔊';
             currentIndex = index;
         }
     }
 
     function getCurrentIndex() {
-        const scrollTop = shortsContainer.scrollTop;
-        const itemHeight = window.innerHeight;
-        return Math.round(scrollTop / itemHeight);
+        return Math.round(shortsContainer.scrollTop / window.innerHeight);
     }
 
     let scrollTimeout;
@@ -717,46 +682,24 @@
             const newIndex = getCurrentIndex();
             if (newIndex !== currentIndex && newIndex >= 0 && newIndex < allVideos.length) {
                 playVideo(newIndex);
-                
-                // Scroll instruction ni yashirish (agar birinchi marta scrol qilingan bo'lsa)
-                if (!scrollInstruction.classList.contains('hide')) {
-                    scrollInstruction.classList.add('hide');
-                }
+                if (!scrollInstruction.classList.contains('hide')) scrollInstruction.classList.add('hide');
             }
         }, 50);
     });
 
-    // Touch scroll detection for instruction
     let touchStartY = 0;
-    shortsContainer.addEventListener('touchstart', (e) => {
-        touchStartY = e.touches[0].clientY;
-    });
-    
+    shortsContainer.addEventListener('touchstart', (e) => { touchStartY = e.touches[0].clientY; });
     shortsContainer.addEventListener('touchmove', (e) => {
-        const touchEndY = e.touches[0].clientY;
-        if (touchStartY - touchEndY > 30) {
-            if (!scrollInstruction.classList.contains('hide')) {
-                scrollInstruction.classList.add('hide');
-            }
+        if (touchStartY - e.touches[0].clientY > 30 && !scrollInstruction.classList.contains('hide')) {
+            scrollInstruction.classList.add('hide');
         }
     });
 
-    // Toggle sound
-    function toggleSound(btn, videoId) {
-        const parent = btn.closest('.short-video');
-        const video = parent.querySelector('video');
-        if (video) {
-            if (video.muted) {
-                video.muted = false;
-                btn.innerHTML = '🔊';
-            } else {
-                video.muted = true;
-                btn.innerHTML = '🔇';
-            }
-        }
+    function toggleSound(btn) {
+        const video = btn.closest('.short-video').querySelector('video');
+        if (video) { video.muted = !video.muted; btn.innerHTML = video.muted ? '🔇' : '🔊'; }
     }
 
-    // Like animation
     function likeVideo(btn) {
         btn.style.transform = 'scale(1.2)';
         setTimeout(() => btn.style.transform = 'scale(1)', 200);
@@ -764,171 +707,80 @@
         setTimeout(() => btn.innerHTML = '❤️', 1000);
     }
 
-    // Download short
-    function downloadShort(btn) {
-        const shortId = btn.getAttribute('data-id');
-        const sarlavha = btn.getAttribute('data-sarlavha');
-        const link = document.createElement('a');
-        link.href = `/download-shorts/${shortId}`;
-        link.download = `${sarlavha}.mp4`;
-        link.click();
-        
-        btn.style.transform = 'scale(1.2)';
-        setTimeout(() => btn.style.transform = 'scale(1)', 200);
-    }
-
-    // ============ MODAL CODE INPUT ============
-    let currentCode = '';
-    const maxCodeLength = 4;
-    const codeDisplay = document.getElementById('codeDisplay');
+    // ============ KOD KIRITISH ============
     const modalOverlay = document.getElementById('modalOverlay');
     const filmLoading = document.getElementById('filmLoading');
-    let modalOpen = false;
-
-    function updateDisplay() {
-        codeDisplay.textContent = currentCode.padEnd(maxCodeLength, '_');
-    }
-
-    function addDigit(d) {
-        if (currentCode.length < maxCodeLength) {
-            currentCode += d;
-            updateDisplay();
-        }
-        if (currentCode.length === maxCodeLength) {
-            submitCode();
-        }
-    }
-
-    function clearCode() { currentCode = ''; updateDisplay(); }
-    function backspace() { currentCode = currentCode.slice(0, -1); updateDisplay(); }
+    const filmKodInput = document.getElementById('filmKod');
+    const watchSubmitBtn = document.getElementById('watchSubmitBtn');
+    const openModalBtn = document.getElementById('openModalBtn');
+    const closeModalBtn = document.getElementById('closeModalBtn');
 
     function submitCode() {
-        if (currentCode.length !== maxCodeLength) {
-            alert('4 xonali kod kiriting!');
+        let kod = filmKodInput.value.trim();
+        if (kod.length === 0) {
+            alert('Iltimos, film kodini kiriting!');
             return;
         }
-        
+        kod = kod.toUpperCase();
         filmLoading.classList.add('show');
         
-        fetch(`/api/check/${currentCode}`)
-            .then(res => res.json())
-            .then(data => {
-                if (data.exists) {
-                    window.location.href = `/film/${currentCode}`;
-                } else {
-                    filmLoading.classList.remove('show');
-                    alert('Bunday kod topilmadi!');
-                    clearCode();
-                }
+        fetch(`/api/check/${kod}`)
+            .then(response => {
+                if (response.ok) return response.json();
+                else throw new Error('NOT_FOUND');
             })
-            .catch(() => {
+            .then(data => {
+                if (data.exists) window.location.href = `/film/${kod}`;
+                else throw new Error('NOT_FOUND');
+            })
+            .catch(err => {
                 filmLoading.classList.remove('show');
-                alert('Xatolik!');
+                if (err.message === 'NOT_FOUND') alert(`"${kod}" kodli film topilmadi!`);
+                else alert('Xatolik yuz berdi!');
+                filmKodInput.value = '';
+                filmKodInput.focus();
             });
     }
 
-    // Numpad
-    document.querySelectorAll('.numpad-btn').forEach(btn => {
-        const val = btn.getAttribute('data-value');
-        if (val && val.trim()) {
-            btn.addEventListener('click', () => addDigit(val));
-        }
-    });
-    
-    document.getElementById('clearBtn').addEventListener('click', clearCode);
-    document.getElementById('backspaceBtn').addEventListener('click', backspace);
-    document.getElementById('watchSubmitBtn').addEventListener('click', submitCode);
-
-    // Modal open/close with animation
-    const openModalBtn = document.getElementById('openModalBtn');
     openModalBtn.addEventListener('click', () => {
         modalOverlay.classList.add('show');
-        codeBar.classList.add('hidden');
-        modalOpen = true;
+        filmKodInput.value = '';
+        setTimeout(() => filmKodInput.focus(), 300);
     });
-
-    const closeModalBtn = document.getElementById('closeModalBtn');
-    if (closeModalBtn) {
-        closeModalBtn.addEventListener('click', () => {
-            modalOverlay.classList.remove('show');
-            codeBar.classList.remove('hidden');
-            clearCode();
-            modalOpen = false;
-        });
-    }
-
+    closeModalBtn.addEventListener('click', () => {
+        modalOverlay.classList.remove('show');
+        filmKodInput.value = '';
+    });
     modalOverlay.addEventListener('click', (e) => {
         if (e.target === modalOverlay) {
             modalOverlay.classList.remove('show');
-            codeBar.classList.remove('hidden');
-            clearCode();
-            modalOpen = false;
+            filmKodInput.value = '';
         }
     });
+    watchSubmitBtn.addEventListener('click', submitCode);
+    filmKodInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') submitCode(); });
 
-    // Keyboard support
-    document.addEventListener('keydown', (e) => {
-        if (modalOpen) {
-            if (e.key >= '0' && e.key <= '9') {
-                addDigit(e.key);
-            } else if (e.key === 'Backspace') {
-                backspace();
-            } else if (e.key === 'Delete') {
-                clearCode();
-            } else if (e.key === 'Enter') {
-                submitCode();
-            } else if (e.key === 'Escape') {
-                modalOverlay.classList.remove('show');
-                codeBar.classList.remove('hidden');
-                clearCode();
-                modalOpen = false;
-            }
-        }
-    });
+    // ============ SERVICE WORKER ============
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/static/sw.js').catch(err => console.log('SW error:', err));
+        });
+    }
 
     // ============ INITIALIZATION ============
     window.addEventListener('load', () => {
-        getAllVideos();
-        
-        // Event listeners for buttons
         document.querySelectorAll('.sound-btn').forEach(btn => {
-            const videoId = btn.getAttribute('data-id');
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                toggleSound(btn, videoId);
-            });
+            btn.addEventListener('click', (e) => { e.stopPropagation(); toggleSound(btn); });
         });
-        
         document.querySelectorAll('.like-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                likeVideo(btn);
-            });
+            btn.addEventListener('click', (e) => { e.stopPropagation(); likeVideo(btn); });
         });
-        
-        document.querySelectorAll('.download-short').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                downloadShort(btn);
-            });
-        });
-        
-        // Auto play first video after preloader
-        setTimeout(() => {
-            if (allVideos.length > 0 && shortsContainer.style.display === 'block') {
-                playVideo(0);
-            }
-        }, 500);
     });
 
-    // Background video pause
     document.addEventListener('visibilitychange', () => {
-        if (document.hidden) {
-            if (currentVideo) currentVideo.pause();
-        } else {
-            if (currentVideo && currentVideo.paused && shortsContainer.style.display === 'block') {
-                currentVideo.play().catch(e => console.log());
-            }
+        if (document.hidden && currentVideo) currentVideo.pause();
+        else if (!document.hidden && currentVideo && currentVideo.paused && shortsContainer.style.display === 'block') {
+            currentVideo.play().catch(e => console.log());
         }
     });
 </script>
