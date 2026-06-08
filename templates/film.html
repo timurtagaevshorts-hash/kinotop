@@ -15,9 +15,12 @@
         }
 
         body {
-            background: #0a0a0a;
+            background: #000;
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            color: #fff;
+            overflow: hidden;
+            height: 100vh;
+            position: fixed;
+            width: 100%;
         }
 
         /* Header */
@@ -26,7 +29,7 @@
             top: 0;
             left: 0;
             right: 0;
-            background: rgba(0, 0, 0, 0.95);
+            background: rgba(0, 0, 0, 0.9);
             backdrop-filter: blur(20px);
             padding: 12px 20px;
             z-index: 1000;
@@ -60,9 +63,9 @@
             transition: background 0.2s;
             text-decoration: none;
         }
-        .back-btn:hover { background: rgba(255,255,255,0.2); }
+        .back-btn:active { background: rgba(255,255,255,0.2); }
 
-        /* Main Container */
+        /* Container */
         .container {
             width: 100%;
             height: 100vh;
@@ -80,14 +83,19 @@
             align-items: center;
             justify-content: center;
         }
-        iframe {
+        
+        /* YouTube iframe - barcha logo va tugmalarni yashirish */
+        .youtube-player {
             width: 100%;
             height: 100%;
             border: none;
+            position: absolute;
+            top: 0;
+            left: 0;
         }
 
-        /* Fullscreen Button */
-        .fullscreen-btn {
+        /* Custom Fullscreen Button */
+        .custom-fullscreen {
             position: absolute;
             bottom: 20px;
             right: 20px;
@@ -105,65 +113,44 @@
             align-items: center;
             justify-content: center;
             transition: all 0.2s;
+            opacity: 0;
+            animation: fadeIn 0.5s forwards 1s;
         }
-        .fullscreen-btn:active { transform: scale(0.95); background: rgba(102,126,234,0.8); }
+        .custom-fullscreen:active { 
+            transform: scale(0.95); 
+            background: rgba(102,126,234,0.8);
+        }
 
-        /* Info Section */
+        /* Video Info */
         .info {
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(0, 0, 0, 0.8);
             backdrop-filter: blur(10px);
-            padding: 20px;
+            padding: 15px 20px;
             border-top: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            z-index: 10;
         }
         .info h1 {
-            font-size: 1.3rem;
+            font-size: 1.2rem;
             font-weight: 700;
-            margin-bottom: 8px;
-            background: linear-gradient(135deg, #fff, #a8b2ff);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            margin-bottom: 5px;
+            color: white;
         }
         .film-code {
             display: inline-flex;
             align-items: center;
             gap: 6px;
             background: linear-gradient(135deg, #667eea, #764ba2);
-            padding: 4px 12px;
+            padding: 3px 10px;
             border-radius: 20px;
             color: white;
-            font-size: 0.75rem;
-            font-weight: 500;
-            margin-bottom: 12px;
-        }
-        .details {
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-            margin-bottom: 12px;
-        }
-        .detail {
-            background: rgba(255,255,255,0.05);
-            border-radius: 10px;
-            padding: 8px 12px;
-        }
-        .detail-label {
-            color: rgba(255,255,255,0.5);
             font-size: 0.7rem;
-            text-transform: uppercase;
-        }
-        .detail-value {
-            color: white;
-            font-size: 0.85rem;
             font-weight: 500;
-            margin-top: 2px;
         }
         .description {
-            color: rgba(255,255,255,0.7);
-            font-size: 0.85rem;
-            line-height: 1.5;
-            margin-top: 10px;
-            padding-top: 10px;
-            border-top: 1px solid rgba(255,255,255,0.1);
+            color: rgba(255,255,255,0.6);
+            font-size: 0.75rem;
+            margin-top: 8px;
         }
 
         /* Loading */
@@ -173,13 +160,13 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0,0,0,0.9);
+            background: #000;
             display: flex;
             align-items: center;
             justify-content: center;
             flex-direction: column;
             gap: 15px;
-            z-index: 1100;
+            z-index: 2000;
             transition: opacity 0.3s;
         }
         .loading-overlay.hide { opacity: 0; visibility: hidden; }
@@ -191,12 +178,30 @@
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
         }
+        .loading-text { color: white; font-size: 0.9rem; }
         @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes fadeIn { to { opacity: 1; } }
 
-        /* Responsive */
+        /* Fullscreen mode */
+        .video-wrapper:-webkit-full-screen {
+            width: 100%;
+            height: 100%;
+        }
+        .video-wrapper:fullscreen {
+            width: 100%;
+            height: 100%;
+        }
+        .video-wrapper:fullscreen .youtube-player {
+            height: 100%;
+        }
+        .video-wrapper:fullscreen .custom-fullscreen {
+            bottom: 30px;
+            right: 30px;
+        }
+
         @media (max-width: 768px) {
-            .info h1 { font-size: 1.1rem; }
-            .fullscreen-btn { width: 42px; height: 42px; font-size: 1.1rem; bottom: 15px; right: 15px; }
+            .custom-fullscreen { width: 42px; height: 42px; font-size: 1.1rem; }
+            .info h1 { font-size: 1rem; }
         }
     </style>
 </head>
@@ -204,7 +209,7 @@
 
 <div class="loading-overlay" id="loadingOverlay">
     <div class="loading-spinner"></div>
-    <div class="loading-text">Video yuklanmoqda...</div>
+    <div class="loading-text">🎬 Video tayyorlanmoqda...</div>
 </div>
 
 <div class="header">
@@ -218,18 +223,21 @@
 </div>
 
 <div class="container">
-    <div class="video-wrapper">
+    <div class="video-wrapper" id="videoWrapper">
+        <!-- YouTube iframe - logo va tugmalar yashirilgan -->
         <iframe 
-            id="videoFrame"
-            src="{{ film.embed_url }}"
+            id="youtubeFrame"
+            class="youtube-player"
+            src="{{ film.embed_url }}&modestbranding=1&showinfo=0&controls=0&rel=0&iv_load_policy=3&fs=0&disablekb=1"
             frameborder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
             allowfullscreen="true"
             webkitallowfullscreen="true"
-            mozallowfullscreen="true"
-            msallowfullscreen="true">
+            mozallowfullscreen="true">
         </iframe>
-        <button class="fullscreen-btn" id="fullscreenBtn">
+        
+        <!-- Custom Fullscreen Button -->
+        <button class="custom-fullscreen" id="fullscreenBtn">
             <i class="fas fa-expand"></i>
         </button>
     </div>
@@ -239,97 +247,139 @@
         <div class="film-code">
             <i class="fas fa-key"></i> Kod: {{ film.kod }}
         </div>
-        
-        <div class="details">
-            <div class="detail">
-                <div class="detail-label">Yil</div>
-                <div class="detail-value">{{ film.yil if film.yil else "Noma'lum" }}</div>
-            </div>
-            <div class="detail">
-                <div class="detail-label">Janr</div>
-                <div class="detail-value">{{ film.janr if film.janr else "Noma'lum" }}</div>
-            </div>
-            <div class="detail">
-                <div class="detail-label">Platforma</div>
-                <div class="detail-value">{{ film.platform|upper if film.platform else "URL" }}</div>
-            </div>
-        </div>
-        
         <div class="description">
-            {{ film.tafsilot if film.tafsilot else "Bu film haqida ma'lumot yo'q." }}
+            {{ film.tafsilot if film.tafsilot else "Bu film haqida ma'lumot yo'q" }}
         </div>
     </div>
 </div>
 
 <script>
-    // Loading
     const loadingOverlay = document.getElementById('loadingOverlay');
-    const iframe = document.getElementById('videoFrame');
+    const videoWrapper = document.getElementById('videoWrapper');
+    const youtubeFrame = document.getElementById('youtubeFrame');
     const fullscreenBtn = document.getElementById('fullscreenBtn');
 
-    // Iframe yuklanganda loading ni yashirish
-    iframe.addEventListener('load', function() {
+    // ============ LOADING ============
+    youtubeFrame.addEventListener('load', () => {
         setTimeout(() => {
             loadingOverlay.classList.add('hide');
         }, 500);
     });
-
-    // Agar 3 sekundda yuklanmasa
+    
     setTimeout(() => {
         loadingOverlay.classList.add('hide');
     }, 3000);
 
-    // ============ FULLSCREEN FIX (TELEGRAM WEB UCHUN) ============
-    function toggleFullscreen() {
-        const elem = document.documentElement;
+    // ============ FULLSCREEN (Telegram Web uchun tuzatilgan) ============
+    function enterFullscreen() {
+        const elem = videoWrapper;
         
-        // 1-usul: Iframe fullscreen
-        if (iframe.requestFullscreen) {
-            iframe.requestFullscreen();
-        } 
-        // 2-usul: Webkit
-        else if (iframe.webkitRequestFullscreen) {
-            iframe.webkitRequestFullscreen();
+        // Standart fullscreen API
+        if (elem.requestFullscreen) {
+            elem.requestFullscreen().catch(err => {
+                console.log('Fullscreen error:', err);
+                fallbackFullscreen();
+            });
         }
-        // 3-usul: MS
-        else if (iframe.msRequestFullscreen) {
-            iframe.msRequestFullscreen();
+        else if (elem.webkitRequestFullscreen) {
+            elem.webkitRequestFullscreen();
         }
-        // 4-usul: Body fullscreen
-        else if (elem.requestFullscreen) {
-            elem.requestFullscreen();
+        else if (elem.msRequestFullscreen) {
+            elem.msRequestFullscreen();
         }
-        // 5-usul: Video element orqali (agar video bo'lsa)
         else {
-            const video = document.querySelector('video');
-            if (video && video.requestFullscreen) {
-                video.requestFullscreen();
-            } else {
-                // Agar fullscreen ishlamasa, yangi oynada ochish
-                window.open(iframe.src, '_blank');
-            }
+            fallbackFullscreen();
         }
     }
-
-    fullscreenBtn.addEventListener('click', toggleFullscreen);
+    
+    function fallbackFullscreen() {
+        // Telegram web uchun maxsus: iframe ni to'g'ridan-to'g'ri kattalashtirish
+        const iframe = youtubeFrame;
+        
+        // Iframe ni vaqtincha oyna sifatida ochish
+        const currentSrc = iframe.src;
+        
+        // Modal oyna yaratish
+        const modal = document.createElement('div');
+        modal.style.position = 'fixed';
+        modal.style.top = '0';
+        modal.style.left = '0';
+        modal.style.width = '100%';
+        modal.style.height = '100%';
+        modal.style.backgroundColor = '#000';
+        modal.style.zIndex = '9999';
+        modal.style.display = 'flex';
+        modal.style.alignItems = 'center';
+        modal.style.justifyContent = 'center';
+        
+        const newIframe = document.createElement('iframe');
+        newIframe.style.width = '100%';
+        newIframe.style.height = '100%';
+        newIframe.style.border = 'none';
+        newIframe.src = currentSrc;
+        newIframe.allow = 'accelerometer; autoplay; fullscreen';
+        
+        const closeBtn = document.createElement('button');
+        closeBtn.innerHTML = '✕';
+        closeBtn.style.position = 'absolute';
+        closeBtn.style.top = '20px';
+        closeBtn.style.right = '20px';
+        closeBtn.style.background = 'rgba(0,0,0,0.7)';
+        closeBtn.style.color = 'white';
+        closeBtn.style.border = 'none';
+        closeBtn.style.width = '44px';
+        closeBtn.style.height = '44px';
+        closeBtn.style.borderRadius = '50%';
+        closeBtn.style.fontSize = '1.5rem';
+        closeBtn.style.cursor = 'pointer';
+        closeBtn.style.zIndex = '10000';
+        
+        closeBtn.onclick = () => {
+            document.body.removeChild(modal);
+        };
+        
+        modal.appendChild(newIframe);
+        modal.appendChild(closeBtn);
+        document.body.appendChild(modal);
+    }
+    
+    // Fullscreen tugmasi bosilganda
+    fullscreenBtn.addEventListener('click', enterFullscreen);
     
     // Double click fullscreen
-    iframe.addEventListener('dblclick', toggleFullscreen);
-
-    // ============ TELEGRAM WEB UCHUN QO'SHIMCHA ============
-    // Telegram web da fullscreen ishlamasa, tugmaga bosganda yangi oynada ochish
-    let fullscreenAttempts = 0;
+    youtubeFrame.addEventListener('dblclick', enterFullscreen);
+    videoWrapper.addEventListener('dblclick', enterFullscreen);
     
-    function checkFullscreenSupport() {
-        if (!document.fullscreenEnabled && !document.webkitFullscreenEnabled) {
-            fullscreenBtn.innerHTML = '<i class="fas fa-external-link-alt"></i>';
-            fullscreenBtn.onclick = () => {
-                window.open(iframe.src, '_blank');
-            };
-        }
+    // ============ TELEGRAM WEB DETEKSI ============
+    function isTelegramWeb() {
+        const ua = navigator.userAgent || '';
+        return ua.includes('Telegram') && !ua.includes('Android') && !ua.includes('iPhone');
     }
     
-    setTimeout(checkFullscreenSupport, 1000);
+    if (isTelegramWeb()) {
+        // Telegram web da fullscreen tugmasini boshqa usul bilan ishlatish
+        fullscreenBtn.addEventListener('click', () => {
+            // Iframe src ni vaqtincha o'zgartirib qayta tiklash
+            const src = youtubeFrame.src;
+            youtubeFrame.src = '';
+            setTimeout(() => {
+                youtubeFrame.src = src;
+            }, 100);
+            setTimeout(() => {
+                fallbackFullscreen();
+            }, 200);
+        });
+    }
+    
+    // ============ YOUTUBE LOGO YASHIRISH QO'SHIMCHA ============
+    // YouTube iframe ga CSS orqali yashirish
+    const style = document.createElement('style');
+    style.textContent = `
+        .youtube-player {
+            pointer-events: auto;
+        }
+    `;
+    document.head.appendChild(style);
 </script>
 </body>
 </html>
