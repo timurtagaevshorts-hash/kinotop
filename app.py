@@ -19,7 +19,7 @@ os.makedirs(app.config['UPLOAD_FOLDER_FILMS'], exist_ok=True)
 os.makedirs(app.config['UPLOAD_FOLDER_SHORTS'], exist_ok=True)
 os.makedirs(os.path.join(BASE_DIR, 'static/uploads'), exist_ok=True)
 
-ADMIN_PASSWORD = 'admin123'
+ADMIN_PASSWORD = 'Betmilion1'
 
 # ============ DATABASE ============
 def init_db():
@@ -333,5 +333,5 @@ def not_found(error):
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))
     print(f"🚀 Kinotop ishga tushdi! Port: {port}")
-    print(f"🔐 Admin panel: /admin (parol: admin123)")
+    print(f"🔐 Admin panel: /admin (parol: Betmilion1)")
     app.run(host='0.0.0.0', port=port, debug=False)
