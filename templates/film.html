@@ -26,18 +26,9 @@
             position: fixed;
         }
 
-        /* Full screen mode */
-        body:fullscreen {
-            overflow: hidden !important;
-            width: 100% !important;
-            height: 100% !important;
-        }
-        body:-webkit-full-screen {
-            overflow: hidden !important;
-        }
-        body:-moz-full-screen {
-            overflow: hidden !important;
-        }
+        body:fullscreen { overflow: hidden !important; width: 100% !important; height: 100% !important; }
+        body:-webkit-full-screen { overflow: hidden !important; }
+        body:-moz-full-screen { overflow: hidden !important; }
 
         .film-container {
             position: relative;
@@ -67,13 +58,11 @@
             object-fit: contain;
         }
 
-        /* Full screen da iframe to'liq ekran */
         .video-wrapper:fullscreen iframe,
         .video-wrapper:-webkit-full-screen iframe,
         .video-wrapper:-moz-full-screen iframe {
             width: 100% !important;
             height: 100% !important;
-            object-fit: contain !important;
         }
 
         .controls-overlay {
@@ -328,60 +317,43 @@
 <script>
     // ============ FILM KODINI OLISH ============
     const filmCode = window.location.pathname.split('/').pop();
-    let currentVideoUrl = '';
+    let player = null;
     let isPlaying = false;
     let controlsTimeout = null;
     let isFullScreen = false;
-    let currentIframe = null;
+    let playerReady = false;
+    let videoDuration = 0;
+    let progressInterval = null;
     
-    // ============ FULL SCREEN FUNCTIONS (Browser + Telegram) ============
+    // ============ FULL SCREEN FUNCTIONS ============
     function toggleFullScreen() {
         const wrapper = document.getElementById('videoWrapper');
         const iframe = document.getElementById('videoIframe');
         
         if (!isFullScreen) {
-            // Enter full screen
-            if (wrapper.requestFullscreen) {
-                wrapper.requestFullscreen();
-            } else if (wrapper.webkitRequestFullscreen) {
-                wrapper.webkitRequestFullscreen();
-            } else if (wrapper.msRequestFullscreen) {
-                wrapper.msRequestFullscreen();
-            } else if (iframe.requestFullscreen) {
-                iframe.requestFullscreen();
-            } else if (iframe.webkitRequestFullscreen) {
-                iframe.webkitRequestFullscreen();
-            } else if (document.documentElement.requestFullscreen) {
-                document.documentElement.requestFullscreen();
-            }
+            if (wrapper.requestFullscreen) wrapper.requestFullscreen();
+            else if (wrapper.webkitRequestFullscreen) wrapper.webkitRequestFullscreen();
+            else if (wrapper.msRequestFullscreen) wrapper.msRequestFullscreen();
+            else if (iframe.requestFullscreen) iframe.requestFullscreen();
+            else if (iframe.webkitRequestFullscreen) iframe.webkitRequestFullscreen();
+            else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
             document.getElementById('fullscreenBtn').innerHTML = '<i class="fas fa-compress"></i>';
             isFullScreen = true;
         } else {
-            // Exit full screen
-            if (document.exitFullscreen) {
-                document.exitFullscreen();
-            } else if (document.webkitExitFullscreen) {
-                document.webkitExitFullscreen();
-            } else if (document.msExitFullscreen) {
-                document.msExitFullscreen();
-            }
+            if (document.exitFullscreen) document.exitFullscreen();
+            else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+            else if (document.msExitFullscreen) document.msExitFullscreen();
             document.getElementById('fullscreenBtn').innerHTML = '<i class="fas fa-expand"></i>';
             isFullScreen = false;
         }
     }
     
-    // Full screen change event listener
     function handleFullScreenChange() {
         const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement);
         const btn = document.getElementById('fullscreenBtn');
         if (btn) {
-            if (isFs) {
-                btn.innerHTML = '<i class="fas fa-compress"></i>';
-                isFullScreen = true;
-            } else {
-                btn.innerHTML = '<i class="fas fa-expand"></i>';
-                isFullScreen = false;
-            }
+            btn.innerHTML = isFs ? '<i class="fas fa-compress"></i>' : '<i class="fas fa-expand"></i>';
+            isFullScreen = isFs;
         }
     }
     
@@ -404,91 +376,113 @@
     }
     
     function togglePlayPause() {
-        const iframe = document.getElementById('videoIframe');
-        if (iframe && iframe.contentWindow) {
-            if (isPlaying) {
-                iframe.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
-                document.getElementById('playPauseBtn').innerHTML = '<i class="fas fa-play"></i>';
-                isPlaying = false;
-            } else {
-                iframe.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
-                document.getElementById('playPauseBtn').innerHTML = '<i class="fas fa-pause"></i>';
-                isPlaying = true;
-            }
+        if (!playerReady || !player) return;
+        if (isPlaying) {
+            player.pauseVideo();
+            document.getElementById('playPauseBtn').innerHTML = '<i class="fas fa-play"></i>';
+            isPlaying = false;
+        } else {
+            player.playVideo();
+            document.getElementById('playPauseBtn').innerHTML = '<i class="fas fa-pause"></i>';
+            isPlaying = true;
         }
     }
     
-    function seek(seconds) {
-        const iframe = document.getElementById('videoIframe');
-        if (iframe && iframe.contentWindow) {
-            iframe.contentWindow.postMessage(JSON.stringify({
-                event: 'command',
-                func: 'seekTo',
-                args: [seconds, true]
-            }), '*');
-        }
+    function seekTo(seconds) {
+        if (!playerReady || !player) return;
+        player.seekTo(seconds, true);
     }
     
-    // ============ FILM MA'LUMOTLARI ============
-    const filmFromServer = {{ film | tojson | safe }};
+    function seekRelative(seconds) {
+        if (!playerReady || !player) return;
+        const current = player.getCurrentTime();
+        const newTime = Math.min(Math.max(0, current + seconds), videoDuration);
+        player.seekTo(newTime, true);
+    }
     
-    function displayFilm() {
-        const loading = document.getElementById('filmLoading');
-        const iframe = document.getElementById('videoIframe');
-        const title = document.getElementById('filmTitle');
-        const desc = document.getElementById('filmDesc');
+    function formatTime(seconds) {
+        if (isNaN(seconds)) return '0:00';
+        const hrs = Math.floor(seconds / 3600);
+        const mins = Math.floor((seconds % 3600) / 60);
+        const secs = Math.floor(seconds % 60);
+        if (hrs > 0) return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+    
+    function updateProgress() {
+        if (!playerReady || !player) return;
+        const current = player.getCurrentTime();
+        const filled = (current / videoDuration) * 100;
+        document.getElementById('progressFilled').style.width = filled + '%';
+        document.getElementById('currentTime').textContent = formatTime(current);
+        document.getElementById('duration').textContent = formatTime(videoDuration);
+    }
+    
+    // ============ YOUTUBE API ============
+    function loadYouTubeAPI() {
+        const tag = document.createElement('script');
+        tag.src = 'https://www.youtube.com/iframe_api';
+        const firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+    }
+    
+    window.onYouTubeIframeAPIReady = function() {
+        const iframeId = 'videoIframe';
+        const filmData = {{ film | tojson | safe }};
         
-        if (!filmFromServer || !filmFromServer.id) {
-            loading.classList.add('hide');
-            showError('Film ma\'lumotlari topilmadi!');
-            setTimeout(() => {
-                window.location.href = '/';
-            }, 2000);
-            return;
-        }
+        let videoId = '';
+        let videoUrl = filmData.video_url || filmData.embed_url || '';
         
-        title.textContent = filmFromServer.sarlavha || filmFromServer.nomi || 'Film';
-        desc.textContent = filmFromServer.tafsilot || filmFromServer.description || '';
-        
-        let videoUrl = filmFromServer.video_url || filmFromServer.embed_url;
-        
-        if (!videoUrl) {
-            loading.classList.add('hide');
-            showError('Video URL topilmadi!');
-            return;
-        }
-        
-        // YouTube video
         if (videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be')) {
-            let videoId = '';
-            if (videoUrl.includes('youtu.be/')) {
-                videoId = videoUrl.split('youtu.be/')[1].split('?')[0];
-            } else if (videoUrl.includes('watch?v=')) {
-                videoId = videoUrl.split('watch?v=')[1].split('&')[0];
-            } else if (videoUrl.includes('embed/')) {
-                videoId = videoUrl.split('embed/')[1].split('?')[0];
-            }
-            
-            if (videoId) {
-                videoUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&controls=0&modestbranding=1&showinfo=0&rel=0&playsinline=1&enablejsapi=1`;
-            }
+            if (videoUrl.includes('youtu.be/')) videoId = videoUrl.split('youtu.be/')[1].split('?')[0];
+            else if (videoUrl.includes('watch?v=')) videoId = videoUrl.split('watch?v=')[1].split('&')[0];
+            else if (videoUrl.includes('embed/')) videoId = videoUrl.split('embed/')[1].split('?')[0];
         }
         
-        iframe.src = videoUrl;
-        currentIframe = iframe;
+        if (!videoId) {
+            document.getElementById('filmLoading').classList.add('hide');
+            document.getElementById('errorMessage').innerHTML = '<i class="fas fa-exclamation-triangle"></i> Video ID topilmadi!';
+            document.getElementById('errorMessage').classList.add('show');
+            return;
+        }
         
-        iframe.onload = () => {
-            setTimeout(() => {
-                loading.classList.add('hide');
-                isPlaying = true;
-                document.getElementById('playPauseBtn').innerHTML = '<i class="fas fa-pause"></i>';
-            }, 500);
-        };
+        document.getElementById('filmTitle').textContent = filmData.sarlavha || filmData.nomi || 'Film';
+        document.getElementById('filmDesc').textContent = filmData.tafsilot || filmData.description || '';
         
-        iframe.onerror = () => {
-            loading.classList.add('hide');
-            showError('Video yuklanmadi!');
-        };
+        player = new YT.Player('videoIframe', {
+            videoId: videoId,
+            playerVars: {
+                autoplay: 1,
+                controls: 0,
+                modestbranding: 1,
+                showinfo: 0,
+                rel: 0,
+                playsinline: 1,
+                enablejsapi: 1,
+                origin: window.location.origin
+            },
+            events: {
+                onReady: onPlayerReady,
+                onStateChange: onPlayerStateChange,
+                onError: onPlayerError
+            }
+        });
+    };
+    
+    function onPlayerReady(event) {
+        playerReady = true;
+        videoDuration = player.getDuration();
+        document.getElementById('duration').textContent = formatTime(videoDuration);
+        document.getElementById('filmLoading').classList.add('hide');
+        isPlaying = true;
+        document.getElementById('playPauseBtn').innerHTML = '<i class="fas fa-pause"></i>';
+        
+        if (progressInterval) clearInterval(progressInterval);
+        progressInterval = setInterval(() => {
+            if (playerReady && player && player.getCurrentTime) {
+                updateProgress();
+            }
+        }, 500);
         
         const wrapper = document.getElementById('videoWrapper');
         wrapper.addEventListener('mousemove', showControls);
@@ -498,68 +492,83 @@
             e.preventDefault();
             toggleFullScreen();
         });
-        
+    }
+    
+    function onPlayerStateChange(event) {
+        const state = event.data;
+        if (state === YT.PlayerState.PLAYING) {
+            isPlaying = true;
+            document.getElementById('playPauseBtn').innerHTML = '<i class="fas fa-pause"></i>';
+        } else if (state === YT.PlayerState.PAUSED) {
+            isPlaying = false;
+            document.getElementById('playPauseBtn').innerHTML = '<i class="fas fa-play"></i>';
+        } else if (state === YT.PlayerState.ENDED) {
+            isPlaying = false;
+            document.getElementById('playPauseBtn').innerHTML = '<i class="fas fa-redo-alt"></i>';
+        }
+    }
+    
+    function onPlayerError(event) {
+        console.error('YouTube error:', event.data);
+        document.getElementById('filmLoading').classList.add('hide');
+        document.getElementById('errorMessage').classList.add('show');
         setTimeout(() => {
-            if (loading) loading.classList.add('hide');
+            document.getElementById('errorMessage').classList.remove('show');
         }, 5000);
     }
     
-    function showError(message) {
-        const errorMsg = document.getElementById('errorMessage');
-        errorMsg.innerHTML = '<i class="fas fa-exclamation-triangle"></i> ' + message;
-        errorMsg.classList.add('show');
-        setTimeout(() => {
-            errorMsg.classList.remove('show');
-        }, 4000);
-    }
+    // ============ PROGRESS BAR CLICK ============
+    document.getElementById('progressBar').addEventListener('click', (e) => {
+        if (!playerReady) return;
+        const rect = e.currentTarget.getBoundingClientRect();
+        const pos = (e.clientX - rect.left) / rect.width;
+        const seekTime = pos * videoDuration;
+        player.seekTo(seekTime, true);
+    });
+    
+    // ============ BUTTON EVENT LISTENERS ============
+    document.getElementById('playPauseBtn').addEventListener('click', togglePlayPause);
+    document.getElementById('fullscreenBtn').addEventListener('click', toggleFullScreen);
+    document.getElementById('rewindBtn').addEventListener('click', () => seekRelative(-10));
+    document.getElementById('forwardBtn').addEventListener('click', () => seekRelative(10));
+    document.getElementById('backBtn').addEventListener('click', () => {
+        window.location.href = '/';
+    });
     
     // ============ KEYBOARD CONTROLS ============
     document.addEventListener('keydown', (e) => {
-        // Space or K for play/pause
         if (e.key === ' ' || e.key === 'Space' || e.key === 'k' || e.key === 'K') {
             e.preventDefault();
             togglePlayPause();
         }
-        // Left arrow for rewind
         else if (e.key === 'ArrowLeft') {
             e.preventDefault();
-            seek(-10);
+            seekRelative(-10);
         }
-        // Right arrow for forward
         else if (e.key === 'ArrowRight') {
             e.preventDefault();
-            seek(10);
+            seekRelative(10);
         }
-        // F for full screen
         else if (e.key === 'f' || e.key === 'F') {
             e.preventDefault();
             toggleFullScreen();
         }
-        // Escape to exit full screen
         else if (e.key === 'Escape' && isFullScreen) {
             toggleFullScreen();
         }
         showControls();
     });
     
-    // ============ INITIALIZE ============
-    document.getElementById('playPauseBtn').addEventListener('click', togglePlayPause);
-    document.getElementById('fullscreenBtn').addEventListener('click', toggleFullScreen);
-    document.getElementById('rewindBtn').addEventListener('click', () => seek(-10));
-    document.getElementById('forwardBtn').addEventListener('click', () => seek(10));
-    document.getElementById('backBtn').addEventListener('click', () => {
-        window.location.href = '/';
-    });
+    // ============ LOAD YOUTUBE API ============
+    loadYouTubeAPI();
     
-    const progressBar = document.getElementById('progressBar');
-    progressBar.addEventListener('click', (e) => {
-        const rect = progressBar.getBoundingClientRect();
-        const pos = (e.clientX - rect.left) / rect.width;
-        seek(pos * 100);
-    });
-    
-    // Start
-    displayFilm();
+    // Fallback: agar YouTube API yuklanmasa
+    setTimeout(() => {
+        const loading = document.getElementById('filmLoading');
+        if (loading && !loading.classList.contains('hide')) {
+            loading.classList.add('hide');
+        }
+    }, 8000);
 </script>
 </body>
 </html>
