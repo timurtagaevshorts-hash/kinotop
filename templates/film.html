@@ -2,8 +2,9 @@
 <html lang="uz">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>{{ film.nomi }} | Kinotop</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         * {
             margin: 0;
@@ -62,16 +63,20 @@
             background: #000;
             border-radius: 16px;
             overflow: hidden;
-        }
-
-        video {
-            width: 100%;
-            max-height: 70vh;
+            aspect-ratio: 16 / 9;
             background: #000;
-            cursor: pointer;
         }
 
-        /* Custom Video Controls */
+        .video-wrapper iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        /* Custom Video Controls for YouTube */
         .custom-controls {
             position: absolute;
             bottom: 0;
@@ -105,16 +110,6 @@
             background: linear-gradient(90deg, #667eea, #764ba2);
             border-radius: 2px;
             position: relative;
-        }
-
-        .progress-buffered {
-            position: absolute;
-            top: 0;
-            left: 0;
-            height: 100%;
-            background: rgba(255,255,255,0.3);
-            border-radius: 2px;
-            z-index: 1;
         }
 
         /* Controls Row */
@@ -278,8 +273,15 @@
         }
 
         /* Fullscreen */
-        video:fullscreen {
-            max-height: 100vh;
+        .video-wrapper:fullscreen {
+            width: 100vw;
+            height: 100vh;
+            border-radius: 0;
+        }
+
+        .video-wrapper:fullscreen iframe {
+            width: 100%;
+            height: 100%;
         }
 
         /* Responsive */
@@ -297,21 +299,22 @@
 
 <div class="header">
     <a href="/">🎬 KINOTOP</a>
-    <button class="download-btn" id="downloadBtn">📥 Yuklab olish</button>
+    <button class="download-btn" id="downloadBtn" style="display: none;">📥 Yuklab olish</button>
 </div>
 
 <div class="container">
-    <div class="video-wrapper">
+    <div class="video-wrapper" id="videoWrapper">
         <div class="loading-indicator" id="loadingIndicator"></div>
-        <video id="videoPlayer" playsinline width="100%">
-            <source src="/stream/{{ film.kod }}" type="video/mp4">
-        </video>
+        <iframe id="youtubeIframe" 
+                src=""
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                allowfullscreen>
+        </iframe>
         
-        <!-- Custom Video Controls -->
+        <!-- Custom Controls for YouTube -->
         <div class="custom-controls" id="customControls">
             <!-- Progress Bar -->
             <div class="progress-bar" id="progressBar">
-                <div class="progress-buffered" id="bufferedBar"></div>
                 <div class="progress-filled" id="progressFilled"></div>
             </div>
             
@@ -381,23 +384,119 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/js/all.min.js"></script>
 <script>
-    const video = document.getElementById('videoPlayer');
-    const playPauseBtn = document.getElementById('playPauseBtn');
-    const progressBar = document.getElementById('progressBar');
-    const progressFilled = document.getElementById('progressFilled');
-    const bufferedBar = document.getElementById('bufferedBar');
-    const currentTimeSpan = document.getElementById('currentTime');
-    const durationSpan = document.getElementById('duration');
-    const volumeBtn = document.getElementById('volumeBtn');
-    const volumeSlider = document.getElementById('volumeSlider');
-    const speedSelect = document.getElementById('speedSelect');
-    const fullscreenBtn = document.getElementById('fullscreenBtn');
-    const downloadBtn = document.getElementById('downloadBtn');
-    const loadingIndicator = document.getElementById('loadingIndicator');
-    const customControls = document.getElementById('customControls');
-
-    let controlsTimeout;
-
+    // YouTube Player API
+    let player = null;
+    let isPlaying = false;
+    let controlsTimeout = null;
+    let isFullScreen = false;
+    
+    // Get YouTube video ID from embed URL
+    function getYouTubeId(url) {
+        if (!url) return null;
+        if (url.includes('youtu.be/')) {
+            return url.split('youtu.be/')[1].split('?')[0];
+        } else if (url.includes('youtube.com/embed/')) {
+            return url.split('youtube.com/embed/')[1].split('?')[0];
+        } else if (url.includes('watch?v=')) {
+            return url.split('watch?v=')[1].split('&')[0];
+        }
+        return null;
+    }
+    
+    // Initialize YouTube player
+    function initYouTubePlayer() {
+        const videoId = getYouTubeId('{{ film.embed_url if film.embed_url else film.video_url }}');
+        
+        if (!videoId) {
+            document.getElementById('loadingIndicator').style.display = 'none';
+            alert('Video URL not found!');
+            return;
+        }
+        
+        // Load YouTube Iframe API
+        if (!window.YT) {
+            const tag = document.createElement('script');
+            tag.src = 'https://www.youtube.com/iframe_api';
+            const firstScriptTag = document.getElementsByTagName('script')[0];
+            firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+            
+            window.onYouTubeIframeAPIReady = function() {
+                createPlayer(videoId);
+            };
+        } else {
+            createPlayer(videoId);
+        }
+    }
+    
+    function createPlayer(videoId) {
+        const wrapper = document.getElementById('videoWrapper');
+        const iframe = document.getElementById('youtubeIframe');
+        
+        player = new YT.Player('youtubeIframe', {
+            height: '100%',
+            width: '100%',
+            videoId: videoId,
+            playerVars: {
+                'autoplay': 1,
+                'controls': 0,
+                'modestbranding': 1,
+                'rel': 0,
+                'showinfo': 0,
+                'playsinline': 1,
+                'enablejsapi': 1,
+                'origin': window.location.origin
+            },
+            events: {
+                'onReady': onPlayerReady,
+                'onStateChange': onPlayerStateChange,
+                'onError': onPlayerError
+            }
+        });
+    }
+    
+    function onPlayerReady(event) {
+        document.getElementById('loadingIndicator').style.display = 'none';
+        event.target.playVideo();
+        isPlaying = true;
+        document.getElementById('playPauseBtn').innerHTML = '<i class="fas fa-pause"></i>';
+        
+        // Get duration
+        const duration = event.target.getDuration();
+        document.getElementById('duration').textContent = formatTime(duration);
+        
+        // Update time periodically
+        setInterval(() => {
+            if (player && player.getCurrentTime) {
+                const currentTime = player.getCurrentTime();
+                document.getElementById('currentTime').textContent = formatTime(currentTime);
+                const duration = player.getDuration();
+                const percent = (currentTime / duration) * 100;
+                document.getElementById('progressFilled').style.width = percent + '%';
+            }
+        }, 1000);
+    }
+    
+    function onPlayerStateChange(event) {
+        if (event.data === YT.PlayerState.PLAYING) {
+            isPlaying = true;
+            document.getElementById('playPauseBtn').innerHTML = '<i class="fas fa-pause"></i>';
+            document.getElementById('loadingIndicator').style.display = 'none';
+        } else if (event.data === YT.PlayerState.PAUSED) {
+            isPlaying = false;
+            document.getElementById('playPauseBtn').innerHTML = '<i class="fas fa-play"></i>';
+        } else if (event.data === YT.PlayerState.BUFFERING) {
+            document.getElementById('loadingIndicator').style.display = 'block';
+        } else {
+            document.getElementById('loadingIndicator').style.display = 'none';
+        }
+    }
+    
+    function onPlayerError(event) {
+        console.error('YouTube error:', event.data);
+        document.getElementById('loadingIndicator').style.display = 'none';
+        alert('Video yuklashda xatolik yuz berdi!');
+    }
+    
     // Format time
     function formatTime(seconds) {
         if (isNaN(seconds)) return '00:00';
@@ -409,168 +508,180 @@
         }
         return `${mins}:${secs.toString().padStart(2, '0')}`;
     }
-
-    // Update progress bar
-    function updateProgress() {
-        if (video.duration) {
-            const percent = (video.currentTime / video.duration) * 100;
-            progressFilled.style.width = percent + '%';
-            currentTimeSpan.textContent = formatTime(video.currentTime);
-        }
-    }
-
-    // Update buffered bar
-    function updateBuffered() {
-        if (video.buffered.length > 0 && video.duration) {
-            const bufferedEnd = video.buffered.end(video.buffered.length - 1);
-            const percent = (bufferedEnd / video.duration) * 100;
-            bufferedBar.style.width = percent + '%';
-        }
-    }
-
+    
     // Play/Pause
     function togglePlay() {
-        if (video.paused) {
-            video.play();
-            playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
-        } else {
-            video.pause();
-            playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
+        if (player) {
+            if (isPlaying) {
+                player.pauseVideo();
+            } else {
+                player.playVideo();
+            }
         }
     }
-
-    playPauseBtn.addEventListener('click', togglePlay);
-
-    video.addEventListener('play', () => {
-        playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
-        loadingIndicator.style.display = 'none';
-    });
-    video.addEventListener('pause', () => {
-        playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
-    });
-
+    
+    // Seek
+    function seek(seconds) {
+        if (player && player.getCurrentTime) {
+            const currentTime = player.getCurrentTime();
+            player.seekTo(currentTime + seconds, true);
+        }
+    }
+    
     // Progress bar click
+    const progressBar = document.getElementById('progressBar');
     progressBar.addEventListener('click', (e) => {
-        const rect = progressBar.getBoundingClientRect();
-        const pos = (e.clientX - rect.left) / rect.width;
-        video.currentTime = pos * video.duration;
+        if (player) {
+            const rect = progressBar.getBoundingClientRect();
+            const pos = (e.clientX - rect.left) / rect.width;
+            const duration = player.getDuration();
+            player.seekTo(pos * duration, true);
+        }
     });
-
-    // Time updates
-    video.addEventListener('timeupdate', updateProgress);
-    video.addEventListener('progress', updateBuffered);
-
-    // Duration
-    video.addEventListener('loadedmetadata', () => {
-        durationSpan.textContent = formatTime(video.duration);
-    });
-
+    
     // Volume
+    const volumeSlider = document.getElementById('volumeSlider');
+    const volumeBtn = document.getElementById('volumeBtn');
+    
     volumeSlider.addEventListener('input', () => {
-        video.volume = volumeSlider.value / 100;
-        updateVolumeIcon();
+        if (player) {
+            player.setVolume(volumeSlider.value);
+            updateVolumeIcon(volumeSlider.value);
+        }
     });
-
-    function updateVolumeIcon() {
-        if (video.volume === 0) {
+    
+    function updateVolumeIcon(volume) {
+        if (volume == 0) {
             volumeBtn.innerHTML = '<i class="fas fa-volume-mute"></i>';
-        } else if (video.volume < 0.5) {
+        } else if (volume < 50) {
             volumeBtn.innerHTML = '<i class="fas fa-volume-down"></i>';
         } else {
             volumeBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
         }
     }
-
+    
     volumeBtn.addEventListener('click', () => {
-        if (video.volume > 0) {
-            video.volume = 0;
-            volumeSlider.value = 0;
-        } else {
-            video.volume = 0.5;
-            volumeSlider.value = 50;
+        if (player) {
+            const currentVolume = player.getVolume();
+            if (currentVolume > 0) {
+                player.setVolume(0);
+                volumeSlider.value = 0;
+                updateVolumeIcon(0);
+            } else {
+                player.setVolume(100);
+                volumeSlider.value = 100;
+                updateVolumeIcon(100);
+            }
         }
-        updateVolumeIcon();
     });
-
+    
     // Playback speed
+    const speedSelect = document.getElementById('speedSelect');
     speedSelect.addEventListener('change', () => {
-        video.playbackRate = parseFloat(speedSelect.value);
-    });
-
-    // Fullscreen
-    fullscreenBtn.addEventListener('click', () => {
-        if (video.requestFullscreen) {
-            video.requestFullscreen();
+        if (player) {
+            player.setPlaybackRate(parseFloat(speedSelect.value));
         }
     });
-
-    // Show/hide controls on mouse move
-    let mouseMoveTimer;
-    video.addEventListener('mousemove', () => {
+    
+    // Fullscreen
+    const wrapper = document.getElementById('videoWrapper');
+    const fullscreenBtn = document.getElementById('fullscreenBtn');
+    
+    function toggleFullScreen() {
+        if (!isFullScreen) {
+            if (wrapper.requestFullscreen) {
+                wrapper.requestFullscreen();
+            } else if (wrapper.webkitRequestFullscreen) {
+                wrapper.webkitRequestFullscreen();
+            } else if (wrapper.msRequestFullscreen) {
+                wrapper.msRequestFullscreen();
+            }
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            }
+        }
+    }
+    
+    fullscreenBtn.addEventListener('click', toggleFullScreen);
+    
+    document.addEventListener('fullscreenchange', () => {
+        isFullScreen = !!document.fullscreenElement;
+        fullscreenBtn.innerHTML = isFullScreen ? '<i class="fas fa-compress"></i>' : '<i class="fas fa-expand"></i>';
+    });
+    
+    // Show/hide controls
+    const customControls = document.getElementById('customControls');
+    
+    function showControls() {
         customControls.style.opacity = '1';
-        clearTimeout(mouseMoveTimer);
-        mouseMoveTimer = setTimeout(() => {
-            if (!video.paused) {
+        if (controlsTimeout) clearTimeout(controlsTimeout);
+        controlsTimeout = setTimeout(() => {
+            if (isPlaying) {
                 customControls.style.opacity = '0';
             }
-        }, 2000);
+        }, 3000);
+    }
+    
+    wrapper.addEventListener('mousemove', showControls);
+    wrapper.addEventListener('click', showControls);
+    wrapper.addEventListener('touchstart', showControls);
+    wrapper.addEventListener('dblclick', (e) => {
+        e.preventDefault();
+        toggleFullScreen();
     });
-
-    video.addEventListener('mouseleave', () => {
-        customControls.style.opacity = '0';
-    });
-
-    // Loading indicator
-    video.addEventListener('waiting', () => {
-        loadingIndicator.style.display = 'block';
-    });
-    video.addEventListener('canplay', () => {
-        loadingIndicator.style.display = 'none';
-    });
-    video.addEventListener('playing', () => {
-        loadingIndicator.style.display = 'none';
-    });
-
-    // Download
-    downloadBtn.addEventListener('click', () => {
-        const link = document.createElement('a');
-        link.href = `/download/{{ film.kod }}`;
-        link.download = '{{ film.nomi }}.mp4';
-        link.click();
-    });
-
+    
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
         if (e.code === 'Space') {
             e.preventDefault();
             togglePlay();
-        }
-        if (e.code === 'ArrowLeft') {
-            video.currentTime -= 10;
-        }
-        if (e.code === 'ArrowRight') {
-            video.currentTime += 10;
-        }
-        if (e.code === 'KeyF') {
-            video.requestFullscreen();
-        }
-        if (e.code === 'ArrowUp') {
-            video.volume = Math.min(1, video.volume + 0.1);
-            volumeSlider.value = video.volume * 100;
-        }
-        if (e.code === 'ArrowDown') {
-            video.volume = Math.max(0, video.volume - 0.1);
-            volumeSlider.value = video.volume * 100;
+            showControls();
+        } else if (e.code === 'ArrowLeft') {
+            e.preventDefault();
+            seek(-10);
+            showControls();
+        } else if (e.code === 'ArrowRight') {
+            e.preventDefault();
+            seek(10);
+            showControls();
+        } else if (e.code === 'KeyF') {
+            e.preventDefault();
+            toggleFullScreen();
+        } else if (e.code === 'ArrowUp') {
+            e.preventDefault();
+            if (player) {
+                let vol = player.getVolume() + 10;
+                vol = Math.min(100, vol);
+                player.setVolume(vol);
+                volumeSlider.value = vol;
+                updateVolumeIcon(vol);
+            }
+        } else if (e.code === 'ArrowDown') {
+            e.preventDefault();
+            if (player) {
+                let vol = player.getVolume() - 10;
+                vol = Math.max(0, vol);
+                player.setVolume(vol);
+                volumeSlider.value = vol;
+                updateVolumeIcon(vol);
+            }
         }
     });
-
-    // Auto play
-    video.play().catch(e => console.log('Autoplay blocked'));
-
-    // Double click fullscreen
-    video.addEventListener('dblclick', () => {
-        video.requestFullscreen();
-    });
+    
+    // Initialize
+    document.getElementById('playPauseBtn').addEventListener('click', togglePlay);
+    
+    // Load YouTube API and player
+    initYouTubePlayer();
+    
+    // Download button (hide for YouTube)
+    const downloadBtn = document.getElementById('downloadBtn');
+    if (downloadBtn) {
+        downloadBtn.style.display = 'none';
+    }
 </script>
 </body>
 </html>
