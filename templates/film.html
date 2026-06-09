@@ -26,9 +26,6 @@
             width: 100%;
         }
 
-        body:fullscreen { overflow: hidden !important; }
-        body:-webkit-full-screen { overflow: hidden !important; }
-
         .film-container {
             position: relative;
             width: 100%;
@@ -54,6 +51,7 @@
             position: absolute;
             top: 0;
             left: 0;
+            object-fit: contain;
         }
 
         .controls-overlay {
@@ -240,32 +238,34 @@
             transform: translateY(0);
         }
 
-        /* TELEGRAM FULL SCREEN - To'liq ekran uchun */
-        .telegram-fullscreen {
+        /* TELEGRAM FULL SCREEN - To'liq ekran, bot belgisisiz */
+        .telegram-fullscreen-mode {
             position: fixed !important;
             top: 0 !important;
             left: 0 !important;
             right: 0 !important;
             bottom: 0 !important;
-            width: 100% !important;
-            height: 100% !important;
+            width: 100vw !important;
+            height: 100vh !important;
             z-index: 99999 !important;
             background: #000 !important;
             margin: 0 !important;
             padding: 0 !important;
             border: none !important;
+            overflow: hidden !important;
         }
 
-        .telegram-fullscreen iframe {
+        .telegram-fullscreen-mode iframe {
             width: 100% !important;
             height: 100% !important;
             position: absolute !important;
             top: 0 !important;
             left: 0 !important;
             border: none !important;
+            object-fit: cover !important;
         }
 
-        .telegram-fullscreen .telegram-fs-close {
+        .telegram-fullscreen-mode .telegram-fs-close {
             position: fixed !important;
             top: 20px !important;
             right: 20px !important;
@@ -284,9 +284,20 @@
             border: 1px solid rgba(255,255,255,0.3) !important;
         }
 
-        /* Hide Telegram UI elements */
-        .telegram-fullscreen ~ * {
+        /* Hide all Telegram UI elements */
+        .telegram-fullscreen-mode ~ *:not(.telegram-fullscreen-mode) {
             display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+        }
+
+        /* Root element style when in full screen */
+        html:has(.telegram-fullscreen-mode) {
+            overflow: hidden !important;
+        }
+
+        body:has(.telegram-fullscreen-mode) {
+            overflow: hidden !important;
         }
 
         @media (max-width: 768px) {
@@ -368,41 +379,68 @@
     let isPlaying = false;
     let controlsTimeout = null;
     let telegramFsDiv = null;
+    let originalContainer = null;
     
-    // ============ TELEGRAM FULL SCREEN (BOT BELGISIZ) ============
+    // ============ TELEGRAM FULL SCREEN (BOT BELGISIZ, TO'LIQ EKRAN) ============
     function telegramFullScreen() {
         const iframe = document.getElementById('videoIframe');
         const currentSrc = iframe.src;
         currentVideoUrl = currentSrc;
         
+        // Save original container
+        originalContainer = document.querySelector('.film-container');
+        
         // Create full screen div
         telegramFsDiv = document.createElement('div');
-        telegramFsDiv.className = 'telegram-fullscreen';
-        telegramFsDiv.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:99999;background:#000;';
+        telegramFsDiv.className = 'telegram-fullscreen-mode';
         
-        // Create iframe
+        // Create iframe for full screen
         const fsIframe = document.createElement('iframe');
         fsIframe.src = currentSrc;
-        fsIframe.allow = 'autoplay; fullscreen; encrypted-media';
+        fsIframe.allow = 'autoplay; fullscreen; encrypted-media; picture-in-picture';
         fsIframe.allowFullscreen = true;
-        fsIframe.style.cssText = 'width:100%;height:100%;border:none;';
+        fsIframe.style.cssText = 'width:100%;height:100%;border:none;object-fit:cover;';
         
         // Create close button
         const closeBtn = document.createElement('div');
         closeBtn.className = 'telegram-fs-close';
         closeBtn.innerHTML = '<i class="fas fa-times"></i>';
-        closeBtn.onclick = function() {
+        closeBtn.onclick = function(e) {
+            e.stopPropagation();
             closeTelegramFullScreen();
         };
         
         telegramFsDiv.appendChild(fsIframe);
         telegramFsDiv.appendChild(closeBtn);
-        document.body.appendChild(telegramFsDiv);
         
-        // Hide original content
-        document.querySelector('.film-container').style.opacity = '0';
-        document.querySelector('.film-container').style.pointerEvents = 'none';
+        // Hide original content completely
+        if (originalContainer) {
+            originalContainer.style.display = 'none';
+        }
+        
+        // Add to body
+        document.body.appendChild(telegramFsDiv);
         document.body.style.overflow = 'hidden';
+        document.documentElement.style.overflow = 'hidden';
+        
+        // Handle orientation change
+        function handleOrientation() {
+            if (telegramFsDiv) {
+                telegramFsDiv.style.width = '100vw';
+                telegramFsDiv.style.height = '100vh';
+                const fsIframeElem = telegramFsDiv.querySelector('iframe');
+                if (fsIframeElem) {
+                    fsIframeElem.style.width = '100%';
+                    fsIframeElem.style.height = '100%';
+                }
+            }
+        }
+        
+        window.addEventListener('resize', handleOrientation);
+        window.addEventListener('orientationchange', handleOrientation);
+        
+        // Store event listener for cleanup
+        telegramFsDiv._resizeHandler = handleOrientation;
         
         // Handle escape key
         document.addEventListener('keydown', fsEscapeHandler);
@@ -416,31 +454,43 @@
     
     function closeTelegramFullScreen() {
         if (telegramFsDiv) {
+            // Remove resize handlers
+            if (telegramFsDiv._resizeHandler) {
+                window.removeEventListener('resize', telegramFsDiv._resizeHandler);
+                window.removeEventListener('orientationchange', telegramFsDiv._resizeHandler);
+            }
             telegramFsDiv.remove();
             telegramFsDiv = null;
         }
         
         // Show original content
-        const container = document.querySelector('.film-container');
-        if (container) {
-            container.style.opacity = '';
-            container.style.pointerEvents = '';
+        const originalContainer = document.querySelector('.film-container');
+        if (originalContainer) {
+            originalContainer.style.display = '';
         }
+        
         document.body.style.overflow = '';
+        document.documentElement.style.overflow = '';
         
         // Remove escape handler
         document.removeEventListener('keydown', fsEscapeHandler);
+        
+        // Ensure video continues playing
+        const iframe = document.getElementById('videoIframe');
+        if (iframe && iframe.contentWindow && isPlaying) {
+            iframe.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
+        }
     }
     
     // ============ BROWSER FULL SCREEN ============
     function browserFullScreen() {
-        const iframe = document.getElementById('videoIframe');
+        const wrapper = document.getElementById('videoWrapper');
         
         if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-            if (iframe.requestFullscreen) {
-                iframe.requestFullscreen();
-            } else if (iframe.webkitRequestFullscreen) {
-                iframe.webkitRequestFullscreen();
+            if (wrapper.requestFullscreen) {
+                wrapper.requestFullscreen();
+            } else if (wrapper.webkitRequestFullscreen) {
+                wrapper.webkitRequestFullscreen();
             } else if (document.documentElement.requestFullscreen) {
                 document.documentElement.requestFullscreen();
             }
@@ -463,7 +513,7 @@
         }
     }
     
-    // Full screen change event
+    // Full screen change event for browser
     document.addEventListener('fullscreenchange', () => {
         const isFs = !!document.fullscreenElement;
         const btn = document.getElementById('fullscreenBtn');
@@ -626,12 +676,18 @@
         style.textContent = `.control-btn { background: rgba(0,0,0,0.7) !important; }`;
         document.head.appendChild(style);
         
+        // Make iframe take full space
+        const iframe = document.getElementById('videoIframe');
+        if (iframe) {
+            iframe.style.objectFit = 'cover';
+        }
+        
         setTimeout(() => {
             const instruction = document.createElement('div');
             instruction.style.cssText = 'position:fixed;bottom:100px;left:20px;right:20px;background:rgba(0,0,0,0.8);backdrop-filter:blur(10px);padding:12px;border-radius:12px;color:white;font-size:0.75rem;text-align:center;z-index:1000';
-            instruction.innerHTML = '⛶ Full screen uchun ikki marta bosing yoki F tugmasini bosing';
+            instruction.innerHTML = '🎬 Full screen uchun ikki marta bosing yoki F tugmasini bosing | ⛶ Video to\'liq ekranda ochiladi';
             document.body.appendChild(instruction);
-            setTimeout(() => instruction.remove(), 4000);
+            setTimeout(() => instruction.remove(), 5000);
         }, 1000);
     }
     
