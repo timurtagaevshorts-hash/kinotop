@@ -346,6 +346,10 @@
             const match = url.match(/[?&]v=([^&]+)/);
             if (match) return match[1];
         }
+        // Agar to'g'ridan-to'g'ri video ID kiritilgan bo'lsa
+        if (url && url.length === 11 && !url.includes('/')) {
+            return url;
+        }
         return null;
     }
     
@@ -353,6 +357,14 @@
     let youTubeId = null;
     const embedUrl = filmData.embed_url || filmData.video_url || '';
     youTubeId = getYouTubeId(embedUrl);
+    
+    // Fallback: agar ID topilmasa, butun URL ni tekshirish
+    if (!youTubeId && embedUrl) {
+        if (embedUrl.includes('youtube.com') || embedUrl.includes('youtu.be')) {
+            const match = embedUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&?]+)/);
+            if (match) youTubeId = match[1];
+        }
+    }
     
     function loadYouTubeAPI() {
         if (typeof YT !== 'undefined' && YT && YT.Player) {
@@ -367,7 +379,9 @@
     
     function createPlayer() {
         if (!youTubeId) {
+            console.error('YouTube ID topilmadi:', embedUrl);
             document.getElementById('filmLoading').classList.add('hide');
+            document.getElementById('errorMessage').innerHTML = '<i class="fas fa-exclamation-triangle"></i> Video ID topilmadi! URL: ' + embedUrl;
             document.getElementById('errorMessage').classList.add('show');
             return;
         }
@@ -437,6 +451,7 @@
     function onPlayerError(event) {
         console.error('YouTube error:', event.data);
         document.getElementById('filmLoading').classList.add('hide');
+        document.getElementById('errorMessage').innerHTML = '<i class="fas fa-exclamation-triangle"></i> Video yuklanmadi! Kodi: ' + youTubeId;
         document.getElementById('errorMessage').classList.add('show');
         setTimeout(() => {
             document.getElementById('errorMessage').classList.remove('show');
@@ -542,7 +557,7 @@
         window.location.href = '/';
     });
     
-    // Click blocker - YouTube tugmalariga bosishni bloklash
+    // Click blocker - YouTube tugmalariga bosishni bloklash va play/pause
     document.getElementById('clickBlocker').addEventListener('click', () => {
         showControls();
         if (playerReady && player) {
@@ -581,7 +596,9 @@
         loadYouTubeAPI();
     } else {
         document.getElementById('filmLoading').classList.add('hide');
+        document.getElementById('errorMessage').innerHTML = '<i class="fas fa-exclamation-triangle"></i> Video ID topilmadi!<br>URL: ' + embedUrl;
         document.getElementById('errorMessage').classList.add('show');
+        console.error('YouTube ID topilmadi. Embed URL:', embedUrl);
     }
     
     setTimeout(() => {
