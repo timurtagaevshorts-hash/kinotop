@@ -22,8 +22,21 @@
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             overflow: hidden;
             height: 100vh;
-            position: fixed;
             width: 100%;
+            position: fixed;
+        }
+
+        /* Full screen mode */
+        body:fullscreen {
+            overflow: hidden !important;
+            width: 100% !important;
+            height: 100% !important;
+        }
+        body:-webkit-full-screen {
+            overflow: hidden !important;
+        }
+        body:-moz-full-screen {
+            overflow: hidden !important;
         }
 
         .film-container {
@@ -52,6 +65,15 @@
             top: 0;
             left: 0;
             object-fit: contain;
+        }
+
+        /* Full screen da iframe to'liq ekran */
+        .video-wrapper:fullscreen iframe,
+        .video-wrapper:-webkit-full-screen iframe,
+        .video-wrapper:-moz-full-screen iframe {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: contain !important;
         }
 
         .controls-overlay {
@@ -181,6 +203,7 @@
             text-decoration: none;
             font-size: 1.2rem;
             border: 1px solid rgba(255,255,255,0.2);
+            cursor: pointer;
         }
 
         .film-loading {
@@ -238,11 +261,6 @@
             transform: translateY(0);
         }
 
-        /* Full screen button active state */
-        .fullscreen-active {
-            background: #667eea !important;
-        }
-
         @media (max-width: 768px) {
             .control-btn { width: 40px; height: 40px; font-size: 1rem; }
             .play-pause-btn { width: 50px; height: 50px; font-size: 1.3rem; }
@@ -257,14 +275,16 @@
 </div>
 
 <div class="film-container">
-    <a href="/" class="back-btn">
+    <div class="back-btn" id="backBtn">
         <i class="fas fa-arrow-left"></i>
-    </a>
+    </div>
     
     <div class="video-wrapper" id="videoWrapper">
         <iframe id="videoIframe" 
                 allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
-                allowfullscreen="true">
+                allowfullscreen="true"
+                webkitallowfullscreen="true"
+                mozallowfullscreen="true">
         </iframe>
         
         <div class="controls-overlay" id="controlsOverlay">
@@ -305,146 +325,69 @@
     <i class="fas fa-exclamation-triangle"></i> Video yuklashda xatolik
 </div>
 
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script>
-    // ============ TELEGRAM WEB APP INIT ============
-    let tg = null;
-    let IS_TELEGRAM = false;
-    
-    try {
-        if (window.Telegram && window.Telegram.WebApp) {
-            tg = window.Telegram.WebApp;
-            tg.ready();
-            tg.expand(); // Expand to full height
-            IS_TELEGRAM = true;
-            console.log('Telegram Web App initialized');
-        }
-    } catch(e) {
-        console.log('Not in Telegram Web App');
-    }
-    
-    // Also check by user agent
-    function isTelegramWeb() {
-        const ua = navigator.userAgent;
-        return ua.includes('Telegram') || 
-               ua.includes('TelegramWeb') ||
-               window.location.hostname.includes('telegram.org');
-    }
-    
-    if (!IS_TELEGRAM && isTelegramWeb()) {
-        IS_TELEGRAM = true;
-    }
-    
     // ============ FILM KODINI OLISH ============
     const filmCode = window.location.pathname.split('/').pop();
     let currentVideoUrl = '';
     let isPlaying = false;
     let controlsTimeout = null;
     let isFullScreen = false;
+    let currentIframe = null;
     
-    // ============ TELEGRAM FULL SCREEN FUNCTIONS ============
-    function telegramRequestFullScreen() {
-        if (tg && tg.requestFullscreen) {
-            // Use Telegram Web App fullscreen API
-            tg.requestFullscreen();
-            document.getElementById('fullscreenBtn').innerHTML = '<i class="fas fa-compress"></i>';
-            isFullScreen = true;
-            
-            // Also try to make video full width
-            const iframe = document.getElementById('videoIframe');
-            if (iframe) {
-                iframe.style.objectFit = 'cover';
-            }
-        } else if (tg && tg.expand) {
-            // Fallback: expand to full height
-            tg.expand();
-        } else {
-            // Fallback to browser fullscreen
-            browserFullScreen();
-        }
-    }
-    
-    function telegramExitFullScreen() {
-        if (tg && tg.exitFullscreen) {
-            tg.exitFullscreen();
-            document.getElementById('fullscreenBtn').innerHTML = '<i class="fas fa-expand"></i>';
-            isFullScreen = false;
-            
-            const iframe = document.getElementById('videoIframe');
-            if (iframe) {
-                iframe.style.objectFit = 'contain';
-            }
-        } else {
-            exitBrowserFullScreen();
-        }
-    }
-    
-    function isTelegramFullScreen() {
-        if (tg && tg.isFullscreen !== undefined) {
-            return tg.isFullscreen;
-        }
-        return isFullScreen;
-    }
-    
-    // ============ BROWSER FULL SCREEN ============
-    function browserFullScreen() {
+    // ============ FULL SCREEN FUNCTIONS (Browser + Telegram) ============
+    function toggleFullScreen() {
         const wrapper = document.getElementById('videoWrapper');
+        const iframe = document.getElementById('videoIframe');
         
-        if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+        if (!isFullScreen) {
+            // Enter full screen
             if (wrapper.requestFullscreen) {
                 wrapper.requestFullscreen();
             } else if (wrapper.webkitRequestFullscreen) {
                 wrapper.webkitRequestFullscreen();
+            } else if (wrapper.msRequestFullscreen) {
+                wrapper.msRequestFullscreen();
+            } else if (iframe.requestFullscreen) {
+                iframe.requestFullscreen();
+            } else if (iframe.webkitRequestFullscreen) {
+                iframe.webkitRequestFullscreen();
             } else if (document.documentElement.requestFullscreen) {
                 document.documentElement.requestFullscreen();
             }
             document.getElementById('fullscreenBtn').innerHTML = '<i class="fas fa-compress"></i>';
             isFullScreen = true;
         } else {
-            exitBrowserFullScreen();
-        }
-    }
-    
-    function exitBrowserFullScreen() {
-        if (document.exitFullscreen) {
-            document.exitFullscreen();
-        } else if (document.webkitExitFullscreen) {
-            document.webkitExitFullscreen();
-        }
-        document.getElementById('fullscreenBtn').innerHTML = '<i class="fas fa-expand"></i>';
-        isFullScreen = false;
-    }
-    
-    function toggleFullScreen() {
-        if (IS_TELEGRAM && tg && tg.requestFullscreen) {
-            if (isTelegramFullScreen()) {
-                telegramExitFullScreen();
-            } else {
-                telegramRequestFullScreen();
+            // Exit full screen
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            } else if (document.msExitFullscreen) {
+                document.msExitFullscreen();
             }
-        } else {
-            browserFullScreen();
+            document.getElementById('fullscreenBtn').innerHTML = '<i class="fas fa-expand"></i>';
+            isFullScreen = false;
         }
     }
     
-    // Full screen change event for browser
-    document.addEventListener('fullscreenchange', () => {
-        const isFs = !!document.fullscreenElement;
+    // Full screen change event listener
+    function handleFullScreenChange() {
+        const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement);
         const btn = document.getElementById('fullscreenBtn');
         if (btn) {
-            btn.innerHTML = isFs ? '<i class="fas fa-compress"></i>' : '<i class="fas fa-expand"></i>';
+            if (isFs) {
+                btn.innerHTML = '<i class="fas fa-compress"></i>';
+                isFullScreen = true;
+            } else {
+                btn.innerHTML = '<i class="fas fa-expand"></i>';
+                isFullScreen = false;
+            }
         }
-        isFullScreen = isFs;
-    });
+    }
     
-    document.addEventListener('webkitfullscreenchange', () => {
-        const isFs = !!document.webkitFullscreenElement;
-        const btn = document.getElementById('fullscreenBtn');
-        if (btn) {
-            btn.innerHTML = isFs ? '<i class="fas fa-compress"></i>' : '<i class="fas fa-expand"></i>';
-        }
-        isFullScreen = isFs;
-    });
+    document.addEventListener('fullscreenchange', handleFullScreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullScreenChange);
+    document.addEventListener('mozfullscreenchange', handleFullScreenChange);
     
     // ============ VIDEO CONTROLS ============
     function showControls() {
@@ -532,6 +475,7 @@
         }
         
         iframe.src = videoUrl;
+        currentIframe = iframe;
         
         iframe.onload = () => {
             setTimeout(() => {
@@ -571,61 +515,41 @@
     
     // ============ KEYBOARD CONTROLS ============
     document.addEventListener('keydown', (e) => {
-        switch(e.key) {
-            case ' ':
-            case 'Space':
-                e.preventDefault();
-                togglePlayPause();
-                break;
-            case 'ArrowLeft':
-                e.preventDefault();
-                seek(-10);
-                break;
-            case 'ArrowRight':
-                e.preventDefault();
-                seek(10);
-                break;
-            case 'f':
-            case 'F':
-                e.preventDefault();
-                toggleFullScreen();
-                break;
-            case 'Escape':
-                if (isFullScreen) {
-                    toggleFullScreen();
-                }
-                break;
+        // Space or K for play/pause
+        if (e.key === ' ' || e.key === 'Space' || e.key === 'k' || e.key === 'K') {
+            e.preventDefault();
+            togglePlayPause();
+        }
+        // Left arrow for rewind
+        else if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            seek(-10);
+        }
+        // Right arrow for forward
+        else if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            seek(10);
+        }
+        // F for full screen
+        else if (e.key === 'f' || e.key === 'F') {
+            e.preventDefault();
+            toggleFullScreen();
+        }
+        // Escape to exit full screen
+        else if (e.key === 'Escape' && isFullScreen) {
+            toggleFullScreen();
         }
         showControls();
     });
-    
-    // ============ TELEGRAM WEB SPECIFIC ============
-    if (IS_TELEGRAM) {
-        const style = document.createElement('style');
-        style.textContent = `
-            .control-btn { background: rgba(0,0,0,0.7) !important; }
-            body { background: #000 !important; }
-        `;
-        document.head.appendChild(style);
-        
-        // Auto expand and request fullscreen on load
-        setTimeout(() => {
-            if (tg && tg.requestFullscreen) {
-                // Show instruction
-                const instruction = document.createElement('div');
-                instruction.style.cssText = 'position:fixed;bottom:100px;left:20px;right:20px;background:rgba(0,0,0,0.8);backdrop-filter:blur(10px);padding:12px;border-radius:12px;color:white;font-size:0.75rem;text-align:center;z-index:1000';
-                instruction.innerHTML = '🎬 Full screen uchun 🖥️ tugmasini bosing yoki F tugmasini bosing | Video to\'liq ekranda ochiladi';
-                document.body.appendChild(instruction);
-                setTimeout(() => instruction.remove(), 5000);
-            }
-        }, 1000);
-    }
     
     // ============ INITIALIZE ============
     document.getElementById('playPauseBtn').addEventListener('click', togglePlayPause);
     document.getElementById('fullscreenBtn').addEventListener('click', toggleFullScreen);
     document.getElementById('rewindBtn').addEventListener('click', () => seek(-10));
     document.getElementById('forwardBtn').addEventListener('click', () => seek(10));
+    document.getElementById('backBtn').addEventListener('click', () => {
+        window.location.href = '/';
+    });
     
     const progressBar = document.getElementById('progressBar');
     progressBar.addEventListener('click', (e) => {
@@ -634,6 +558,7 @@
         seek(pos * 100);
     });
     
+    // Start
     displayFilm();
 </script>
 </body>
