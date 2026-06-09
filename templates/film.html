@@ -270,6 +270,7 @@
     
     <div class="video-wrapper" id="videoWrapper">
         <iframe id="videoIframe" 
+                src="about:blank"
                 allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
                 allowfullscreen="true"
                 webkitallowfullscreen="true"
@@ -315,8 +316,8 @@
 </div>
 
 <script>
-    // ============ FILM KODINI OLISH ============
-    const filmCode = window.location.pathname.split('/').pop();
+    // ============ FILM MA'LUMOTLARI ============
+    const filmData = {{ film | tojson | safe }};
     let player = null;
     let isPlaying = false;
     let controlsTimeout = null;
@@ -324,6 +325,8 @@
     let playerReady = false;
     let videoDuration = 0;
     let progressInterval = null;
+    let retryCount = 0;
+    const maxRetries = 3;
     
     // ============ FULL SCREEN FUNCTIONS ============
     function toggleFullScreen() {
@@ -388,11 +391,6 @@
         }
     }
     
-    function seekTo(seconds) {
-        if (!playerReady || !player) return;
-        player.seekTo(seconds, true);
-    }
-    
     function seekRelative(seconds) {
         if (!playerReady || !player) return;
         const current = player.getCurrentTime();
@@ -401,7 +399,7 @@
     }
     
     function formatTime(seconds) {
-        if (isNaN(seconds)) return '0:00';
+        if (isNaN(seconds) || seconds === undefined) return '0:00';
         const hrs = Math.floor(seconds / 3600);
         const mins = Math.floor((seconds % 3600) / 60);
         const secs = Math.floor(seconds % 60);
@@ -411,38 +409,60 @@
     
     function updateProgress() {
         if (!playerReady || !player) return;
-        const current = player.getCurrentTime();
-        const filled = (current / videoDuration) * 100;
-        document.getElementById('progressFilled').style.width = filled + '%';
-        document.getElementById('currentTime').textContent = formatTime(current);
-        document.getElementById('duration').textContent = formatTime(videoDuration);
+        try {
+            const current = player.getCurrentTime();
+            const filled = (current / videoDuration) * 100;
+            document.getElementById('progressFilled').style.width = filled + '%';
+            document.getElementById('currentTime').textContent = formatTime(current);
+            document.getElementById('duration').textContent = formatTime(videoDuration);
+        } catch(e) {}
+    }
+    
+    function showError(message) {
+        const loading = document.getElementById('filmLoading');
+        loading.classList.add('hide');
+        const errorMsg = document.getElementById('errorMessage');
+        errorMsg.innerHTML = '<i class="fas fa-exclamation-triangle"></i> ' + message;
+        errorMsg.classList.add('show');
+        setTimeout(() => errorMsg.classList.remove('show'), 5000);
     }
     
     // ============ YOUTUBE API ============
+    function getYouTubeIdFromUrl(url) {
+        if (!url) return null;
+        if (url.includes('youtu.be/')) {
+            return url.split('youtu.be/')[1].split('?')[0];
+        } else if (url.includes('watch?v=')) {
+            return url.split('watch?v=')[1].split('&')[0];
+        } else if (url.includes('embed/')) {
+            return url.split('embed/')[1].split('?')[0];
+        } else if (url.includes('youtube.com')) {
+            const match = url.match(/[?&]v=([^&]+)/);
+            if (match) return match[1];
+        }
+        return null;
+    }
+    
     function loadYouTubeAPI() {
+        if (typeof YT !== 'undefined' && YT && YT.Player) {
+            initPlayer();
+            return;
+        }
+        
         const tag = document.createElement('script');
         tag.src = 'https://www.youtube.com/iframe_api';
         const firstScriptTag = document.getElementsByTagName('script')[0];
         firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
     }
     
-    window.onYouTubeIframeAPIReady = function() {
-        const iframeId = 'videoIframe';
-        const filmData = {{ film | tojson | safe }};
-        
+    function initPlayer() {
         let videoId = '';
-        let videoUrl = filmData.video_url || filmData.embed_url || '';
+        const videoUrl = filmData.video_url || filmData.embed_url || '';
         
-        if (videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be')) {
-            if (videoUrl.includes('youtu.be/')) videoId = videoUrl.split('youtu.be/')[1].split('?')[0];
-            else if (videoUrl.includes('watch?v=')) videoId = videoUrl.split('watch?v=')[1].split('&')[0];
-            else if (videoUrl.includes('embed/')) videoId = videoUrl.split('embed/')[1].split('?')[0];
-        }
+        videoId = getYouTubeIdFromUrl(videoUrl);
         
         if (!videoId) {
-            document.getElementById('filmLoading').classList.add('hide');
-            document.getElementById('errorMessage').innerHTML = '<i class="fas fa-exclamation-triangle"></i> Video ID topilmadi!';
-            document.getElementById('errorMessage').classList.add('show');
+            showError('Video ID topilmadi!');
             return;
         }
         
@@ -467,7 +487,7 @@
                 onError: onPlayerError
             }
         });
-    };
+    }
     
     function onPlayerReady(event) {
         playerReady = true;
@@ -505,16 +525,23 @@
         } else if (state === YT.PlayerState.ENDED) {
             isPlaying = false;
             document.getElementById('playPauseBtn').innerHTML = '<i class="fas fa-redo-alt"></i>';
+        } else if (state === YT.PlayerState.BUFFERING) {
+            console.log('Buffering...');
         }
     }
     
     function onPlayerError(event) {
         console.error('YouTube error:', event.data);
-        document.getElementById('filmLoading').classList.add('hide');
-        document.getElementById('errorMessage').classList.add('show');
-        setTimeout(() => {
-            document.getElementById('errorMessage').classList.remove('show');
-        }, 5000);
+        retryCount++;
+        if (retryCount <= maxRetries) {
+            setTimeout(() => {
+                if (player && player.loadVideoById) {
+                    player.loadVideoById(player.getVideoData().video_id);
+                }
+            }, 2000);
+        } else {
+            showError('Video yuklanmadi! Internet ulanishini tekshiring.');
+        }
     }
     
     // ============ PROGRESS BAR CLICK ============
@@ -554,21 +581,23 @@
             toggleFullScreen();
         }
         else if (e.key === 'Escape' && isFullScreen) {
+            e.preventDefault();
             toggleFullScreen();
         }
         showControls();
     });
     
-    // ============ LOAD YOUTUBE API ============
+    // ============ START ============
+    window.onYouTubeIframeAPIReady = initPlayer;
     loadYouTubeAPI();
     
-    // Fallback: agar YouTube API yuklanmasa
+    // Fallback timeout
     setTimeout(() => {
         const loading = document.getElementById('filmLoading');
         if (loading && !loading.classList.contains('hide')) {
             loading.classList.add('hide');
         }
-    }, 8000);
+    }, 10000);
 </script>
 </body>
 </html>
