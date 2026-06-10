@@ -79,6 +79,14 @@
             margin-bottom: 20px;
             color: #ff6b6b;
         }
+        .success {
+            background: rgba(40,167,69,0.3);
+            border: 1px solid #28a745;
+            padding: 12px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            color: #6bff6b;
+        }
 
         /* ============ ADMIN PANEL (LOGGED IN) ============ */
         .admin-wrapper {
@@ -313,6 +321,13 @@
         .btn-danger:hover {
             background: #c82333;
         }
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #218838;
+        }
         .btn-sm {
             padding: 6px 12px;
             font-size: 0.8rem;
@@ -353,6 +368,64 @@
         .badge-instagram { background: #e4405f; color: white; }
         .badge-tiktok { background: #000000; color: white; }
         .badge-uzmovi { background: #10b981; color: white; }
+        .badge-googledrive { background: #4285f4; color: white; }
+        .badge-uzmedia { background: #667eea; color: white; }
+
+        /* Loading Spinner */
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            margin-right: 8px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Toggle Switch */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: 0.3s;
+            border-radius: 24px;
+        }
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.3s;
+            border-radius: 50%;
+        }
+        input:checked + .toggle-slider {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+        input:checked + .toggle-slider:before {
+            transform: translateX(26px);
+        }
 
         /* Responsive */
         @media (max-width: 768px) {
@@ -409,6 +482,12 @@
                 <div class="menu-item" data-page="add-short">
                     <i class="fas fa-video"></i> Shorts qo'shish
                 </div>
+                <div class="menu-item" data-page="dynamic-button">
+                    <i class="fas fa-sliders-h"></i> Dinamik Tugma
+                </div>
+                <div class="menu-item" data-page="channel-shorts">
+                    <i class="fab fa-youtube"></i> Kanal Shortslari
+                </div>
                 <div class="menu-item" data-page="films-list">
                     <i class="fas fa-list"></i> Filmlar ro'yxati
                 </div>
@@ -445,10 +524,16 @@
                     <div class="card-title"><i class="fas fa-chart-line"></i> So'nggi filmlar</div>
                     <div class="table-container">
                         <table>
-                            <thead><tr><th>Kod</th><th>Nomi</th><th>Platforma</th></tr></thead>
+                            <thead>
+                                <tr><th>Kod</th><th>Nomi</th><th>Platforma</th></tr>
+                            </thead>
                             <tbody>
                                 {% for film in filmlar[:5] %}
-                                <tr><td>{{ film.kod }}</td><td>{{ film.nomi }}</td><td><span class="badge badge-{{ film.platform }}">{{ film.platform|upper }}</span></td></tr>
+                                <tr>
+                                    <td>{{ film.kod }}</td>
+                                    <td>{{ film.nomi }}</td>
+                                    <td><span class="badge badge-{{ film.platform }}">{{ film.platform|upper }}</span></td>
+                                </tr>
                                 {% endfor %}
                             </tbody>
                         </table>
@@ -465,7 +550,7 @@
                             <div class="form-group"><label>Film kodi (4 xonali)</label><input type="text" name="kod" maxlength="4" required></div>
                             <div class="form-group"><label>Film nomi</label><input type="text" name="nomi" required></div>
                         </div>
-                        <div class="form-group"><label>Video URL</label><input type="text" name="video_url" placeholder="https://youtu.be/... yoki https://vk.com/video..."><small>YouTube, VK, UzMovi, Instagram, Vimeo</small></div>
+                        <div class="form-group"><label>Video URL</label><input type="text" name="video_url" placeholder="https://youtu.be/... yoki https://drive.google.com/..."><small>YouTube, Google Drive, Uzmedia.tv va boshqa platformalar</small></div>
                         <div class="form-group"><label>Haqida</label><textarea name="tafsilot" rows="3"></textarea></div>
                         <div class="form-row">
                             <div class="form-group"><label>Yil</label><input type="text" name="yil" placeholder="2024"></div>
@@ -481,12 +566,72 @@
             <div id="add-short-page" style="display: none;">
                 <div class="card">
                     <div class="card-title"><i class="fas fa-video"></i> Yangi Shorts qo'shish</div>
-                    <form method="POST" action="/admin/shorts" enctype="multipart/form-data">
+                    <form method="POST" action="/admin/shorts">
                         <div class="form-group"><label>Shorts sarlavhasi</label><input type="text" name="sarlavha" required></div>
-                        <div class="form-group"><label>Video URL</label><input type="text" name="video_url" placeholder="https://youtube.com/shorts/... yoki https://instagram.com/reel/..."><small>YouTube Shorts, Instagram Reel, TikTok</small></div>
+                        <div class="form-group"><label>Video URL</label><input type="text" name="video_url" placeholder="https://youtube.com/shorts/..."><small>YouTube Shorts, Instagram Reel, TikTok</small></div>
                         <div class="form-group"><label>Qisqacha ma'lumot</label><textarea name="tafsilot" rows="2"></textarea></div>
                         <button type="submit" class="btn btn-primary">📤 Shorts yuklash</button>
                     </form>
+                </div>
+            </div>
+
+            <!-- DINAMIK TUGMA SOZLAMALARI -->
+            <div id="dynamic-button-page" style="display: none;">
+                <div class="card">
+                    <div class="card-title"><i class="fas fa-sliders-h"></i> Dinamik Tugma Sozlamalari</div>
+                    <form method="POST" action="/admin/action-button">
+                        <div class="form-group">
+                            <label>
+                                <div class="toggle-switch">
+                                    <input type="checkbox" name="enabled" value="true" id="toggleEnabled" {% if action_config and action_config.enabled %}checked{% endif %}>
+                                    <span class="toggle-slider"></span>
+                                </div>
+                                Tugmani faollashtirish
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label>Tugma matni</label>
+                            <input type="text" name="text" value="{{ action_config.text if action_config else 'Top Kino' }}" placeholder="Masalan: Top Kino">
+                        </div>
+                        <div class="form-group">
+                            <label>Havola (URL)</label>
+                            <input type="text" name="url" value="{{ action_config.url if action_config else 'https://t.me/Kodlikino_topbot' }}" placeholder="https://...">
+                            <small>Telegram kanal, bot yoki istalgan URL</small>
+                        </div>
+                        <button type="submit" class="btn btn-primary">💾 Sozlamalarni saqlash</button>
+                    </form>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title"><i class="fas fa-eye"></i> Oldindan ko'rish</div>
+                    <div style="background: #1e1e2a; border-radius: 20px; padding: 20px; text-align: center;">
+                        <div style="display: inline-flex; background: linear-gradient(135deg, #ff8c42, #ff6a1a); padding: 10px 20px; border-radius: 40px; color: white; gap: 10px;">
+                            <i class="fas fa-ticket-alt"></i>
+                            <span id="previewText">{{ action_config.text if action_config else 'Top Kino' }}</span>
+                        </div>
+                        <p style="margin-top: 15px; font-size: 0.8rem; color: rgba(255,255,255,0.6);">Saytning yuqori o'ng burchagida "Seriallar" tugmasi ostida ko'rinadi</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CHANNEL SHORTS -->
+            <div id="channel-shorts-page" style="display: none;">
+                <div class="card">
+                    <div class="card-title"><i class="fab fa-youtube"></i> YouTube kanaldan Shortslar olish</div>
+                    
+                    <div class="form-group">
+                        <label>YouTube kanal URL yoki kanal ID</label>
+                        <input type="text" id="channelUrl" placeholder="https://youtube.com/@Kinotop yoki UCXuqSBlHAE6Xw-yeJA0Tunw">
+                        <small>Kanal manzilini kiriting. Masalan: https://youtube.com/@Kinotop</small>
+                    </div>
+                    
+                    <button class="btn btn-primary" id="fetchChannelBtn" onclick="fetchChannelShorts()">
+                        <i class="fab fa-youtube"></i> Shortslarni olish
+                    </button>
+                    
+                    <div id="channelResult" style="margin-top: 20px; display: none;">
+                        <div class="success" id="resultMessage"></div>
+                    </div>
                 </div>
             </div>
 
@@ -496,7 +641,9 @@
                     <div class="card-title"><i class="fas fa-list"></i> Barcha filmlar ({{ filmlar|length }})</div>
                     <div class="table-container">
                         <table>
-                            <thead><tr><th>Kod</th><th>Nomi</th><th>Yil</th><th>Platforma</th><th>Harakat</th></tr></thead>
+                            <thead>
+                                <tr><th>Kod</th><th>Nomi</th><th>Yil</th><th>Platforma</th><th>Harakat</th></tr>
+                            </thead>
                             <tbody>
                                 {% for film in filmlar %}
                                 <tr>
@@ -523,7 +670,9 @@
                     <div class="card-title"><i class="fas fa-layer-group"></i> Barcha Shortslar ({{ shorts_list|length }})</div>
                     <div class="table-container">
                         <table>
-                            <thead><tr><th>Sarlavha</th><th>Platforma</th><th>Qo'shilgan</th><th>Harakat</th></tr></thead>
+                            <thead>
+                                <tr><th>Sarlavha</th><th>Platforma</th><th>Qo'shilgan</th><th>Harakat</th></tr>
+                            </thead>
                             <tbody>
                                 {% for short in shorts_list %}
                                 <tr>
@@ -546,11 +695,14 @@
     </div>
 
     <script>
+        // Menu navigation
         const menuItems = document.querySelectorAll('.menu-item');
         const pages = {
             'dashboard': ['dashboard-page', 'Dashboard'],
             'add-film': ['add-film-page', 'Film qo\'shish'],
             'add-short': ['add-short-page', 'Shorts qo\'shish'],
+            'dynamic-button': ['dynamic-button-page', 'Dinamik Tugma'],
+            'channel-shorts': ['channel-shorts-page', 'Kanal Shortslari'],
             'films-list': ['films-list-page', 'Filmlar ro\'yxati'],
             'shorts-list': ['shorts-list-page', 'Shorts ro\'yxati']
         };
@@ -578,6 +730,7 @@
             });
         });
 
+        // Mobile menu toggle
         const menuToggle = document.getElementById('menuToggle');
         const sidebar = document.getElementById('sidebar');
         if (menuToggle) {
@@ -589,6 +742,53 @@
                 sidebar.classList.remove('open');
             }
         });
+
+        // Preview text update
+        const textInput = document.querySelector('input[name="text"]');
+        const previewSpan = document.getElementById('previewText');
+        if (textInput && previewSpan) {
+            textInput.addEventListener('input', () => {
+                previewSpan.innerText = textInput.value || 'Top Kino';
+            });
+        }
+
+        // Fetch channel shorts
+        async function fetchChannelShorts() {
+            const channelUrl = document.getElementById('channelUrl').value.trim();
+            const resultDiv = document.getElementById('channelResult');
+            const resultMessage = document.getElementById('resultMessage');
+            
+            if (!channelUrl) {
+                alert('Iltimos, kanal URL manzilini kiriting!');
+                return;
+            }
+            
+            resultDiv.style.display = 'block';
+            resultMessage.innerHTML = '<div class="loading-spinner"></div> Shortslar yuklanmoqda...';
+            resultMessage.className = '';
+            
+            try {
+                const response = await fetch('/admin/fetch_channel_shorts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ channel_url: channelUrl })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultMessage.innerHTML = `<i class="fas fa-check-circle"></i> ${data.message}`;
+                    resultMessage.className = 'success';
+                    setTimeout(() => { location.reload(); }, 2000);
+                } else {
+                    resultMessage.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${data.message}`;
+                    resultMessage.className = 'error';
+                }
+            } catch (error) {
+                resultMessage.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Xatolik: ${error.message}`;
+                resultMessage.className = 'error';
+            }
+        }
     </script>
 {% endif %}
 </body>
