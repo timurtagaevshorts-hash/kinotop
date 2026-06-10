@@ -1,349 +1,759 @@
-import os
-import sqlite3
-import re
-from flask import Flask, render_template, request, redirect, url_for, jsonify, session
-from functools import wraps
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Kinotop | Shorts — Professional videolar</title>
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+    <meta name="theme-color" content="#667eea">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
 
-app = Flask(__name__)
-app.secret_key = 'kinotop-secret-key-2024'
+        body {
+            background: #000;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            position: fixed;
+            width: 100%;
+        }
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-UPLOAD_FOLDER_POSTERS = os.path.join(BASE_DIR, 'static/uploads/posters')
-os.makedirs(UPLOAD_FOLDER_POSTERS, exist_ok=True)
+        .shorts-container {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            overflow-y: scroll;
+            scroll-snap-type: y mandatory;
+            scroll-behavior: smooth;
+            background: #000;
+            -webkit-overflow-scrolling: touch;
+        }
+        .shorts-container::-webkit-scrollbar { display: none; }
 
-ADMIN_PASSWORD = 'Betmilion1'
-ALLOWED_IMAGE = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+        .short-video {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            scroll-snap-align: start;
+            background: #0a0a0a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .short-video iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            opacity: 0;
+            transition: opacity 0.25s ease;
+            object-fit: cover;
+        }
+        .short-video iframe.active {
+            opacity: 1;
+            z-index: 5;
+        }
+        .short-video iframe.inactive {
+            opacity: 0;
+            z-index: 1;
+        }
 
-# ============ DATABASE ============
-def get_db():
-    db_path = os.path.join(BASE_DIR, 'database.db')
-    conn = sqlite3.connect(db_path, check_same_thread=False)
-    conn.row_factory = sqlite3.Row
-    return conn
+        .short-info {
+            position: absolute;
+            bottom: 90px;
+            left: 20px;
+            right: 80px;
+            z-index: 15;
+            background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%);
+            padding: 20px 14px 12px 14px;
+            border-radius: 20px;
+            pointer-events: none;
+        }
+        .short-title {
+            color: white;
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+            text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+        }
+        .short-desc {
+            color: rgba(255,255,255,0.75);
+            font-size: 0.8rem;
+            line-height: 1.3;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+        }
 
-def init_db():
-    with get_db() as conn:
-        conn.execute('''CREATE TABLE IF NOT EXISTS films (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            kod TEXT UNIQUE NOT NULL,
-            nomi TEXT NOT NULL,
-            tafsilot TEXT,
-            yil TEXT,
-            janr TEXT,
-            rasm TEXT,
-            video_url TEXT NOT NULL,
-            platform TEXT,
-            sana TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )''')
+        .overlay-buttons {
+            position: absolute;
+            right: 14px;
+            bottom: 100px;
+            z-index: 20;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+        .overlay-btn {
+            background: rgba(20,20,35,0.7);
+            backdrop-filter: blur(12px);
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.3rem;
+            cursor: pointer;
+            transition: transform 0.2s cubic-bezier(0.2, 0.9, 0.4, 1.1), background 0.2s;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .overlay-btn:active { transform: scale(0.92); }
+
+        .logo {
+            position: fixed;
+            top: 18px;
+            left: 18px;
+            z-index: 50;
+            background: rgba(0,0,0,0.55);
+            backdrop-filter: blur(12px);
+            padding: 8px 20px;
+            border-radius: 40px;
+            color: white;
+            font-weight: 700;
+            font-size: 1rem;
+            border: 0.5px solid rgba(255,255,255,0.2);
+        }
+        .logo span {
+            background: linear-gradient(135deg, #fff, #b794f4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .admin-btn {
+            position: fixed;
+            top: 18px;
+            right: 80px;
+            z-index: 50;
+            background: rgba(0,0,0,0.55);
+            backdrop-filter: blur(12px);
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-decoration: none;
+            font-size: 1.1rem;
+            border: 0.5px solid rgba(255,255,255,0.2);
+        }
+
+        /* Telegram seriallar tugmasi */
+        .telegram-series-btn {
+            position: fixed;
+            top: 18px;
+            right: 18px;
+            z-index: 51;
+            background: linear-gradient(135deg, #1f8a4c, #29b364);
+            backdrop-filter: blur(8px);
+            padding: 8px 18px;
+            border-radius: 40px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: white;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+            transition: transform 0.2s ease;
+        }
+        .telegram-series-btn:active { transform: scale(0.95); }
+        .telegram-series-btn i { font-size: 1.2rem; }
+
+        /* DINAMIK TUGMA - admin panel orqali boshqariladi */
+        .dynamic-action-btn {
+            position: fixed;
+            top: 76px;
+            right: 18px;
+            z-index: 51;
+            background: linear-gradient(135deg, #ff8c42, #ff6a1a);
+            backdrop-filter: blur(8px);
+            padding: 8px 18px;
+            border-radius: 40px;
+            display: none;
+            align-items: center;
+            gap: 8px;
+            color: white;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+            transition: transform 0.2s ease;
+        }
+        .dynamic-action-btn:active { transform: scale(0.95); }
+        .dynamic-action-btn i { font-size: 1.1rem; }
+
+        .code-btn {
+            position: fixed;
+            bottom: 24px;
+            left: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, rgba(102,126,234,0.96), rgba(118,75,162,0.96));
+            backdrop-filter: blur(24px);
+            border-radius: 70px;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            z-index: 100;
+            border: 1px solid rgba(255,255,255,0.25);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+        }
+        .code-btn:active { transform: scale(0.97); }
+        .code-btn-left { display: flex; align-items: center; gap: 14px; }
+        .code-btn-icon {
+            width: 48px;
+            height: 48px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+        }
+        .code-btn-text h4 { color: white; font-size: 0.95rem; font-weight: 700; }
+        .code-btn-text p { color: rgba(255,255,255,0.75); font-size: 0.7rem; }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.94);
+            backdrop-filter: blur(20px);
+            z-index: 200;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.show { display: flex; }
+        .modal-container {
+            width: 90%;
+            max-width: 400px;
+            background: rgba(20,20,35,0.9);
+            backdrop-filter: blur(20px);
+            border-radius: 48px;
+            overflow: hidden;
+            border: 1px solid rgba(102,126,234,0.5);
+        }
+        .modal-header {
+            padding: 28px 20px;
+            text-align: center;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+        .modal-header h3 { color: white; font-size: 1.5rem; margin-bottom: 6px; }
+        .modal-header p { color: rgba(255,255,255,0.85); font-size: 0.85rem; }
+
+        .code-screen {
+            background: rgba(0,0,0,0.6);
+            margin: 28px 24px;
+            padding: 22px 16px;
+            border-radius: 60px;
+            text-align: center;
+            border: 1.5px solid rgba(102,126,234,0.7);
+        }
+        .code-digits {
+            font-size: 2.8rem;
+            font-weight: 800;
+            letter-spacing: 18px;
+            color: white;
+            font-family: monospace;
+        }
+        .numpad {
+            padding: 0 24px 20px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 14px;
+        }
+        .numpad-btn {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 70px;
+            padding: 18px;
+            font-size: 1.7rem;
+            font-weight: 700;
+            color: white;
+            text-align: center;
+            cursor: pointer;
+        }
+        .numpad-btn:active { background: #667eea; transform: scale(0.96); }
+        .action-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            padding: 0 24px 20px;
+        }
+        .action-clear, .action-delete {
+            border: none;
+            border-radius: 60px;
+            padding: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .action-clear { background: #dc3545cc; color: white; }
+        .action-delete { background: #ffc107cc; color: #1e1e2a; }
+        .watch-submit {
+            width: calc(100% - 48px);
+            margin: 0 24px 28px;
+            padding: 16px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+            border-radius: 80px;
+            color: white;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .modal-close {
+            position: absolute;
+            top: 24px;
+            right: 24px;
+            background: rgba(255,255,255,0.2);
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.3rem;
+            cursor: pointer;
+        }
+
+        .film-loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.96);
+            z-index: 300;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 20px;
+            visibility: hidden;
+            opacity: 0;
+            transition: 0.25s;
+        }
+        .film-loading.show { visibility: visible; opacity: 1; }
+        .film-loading-spinner {
+            width: 56px;
+            height: 56px;
+            border: 3px solid rgba(102,126,234,0.3);
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .scroll-instruction {
+            position: absolute;
+            bottom: 150px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            z-index: 55;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+            opacity: 1;
+        }
+        .scroll-instruction.fade-out { opacity: 0; visibility: hidden; }
+        .scroll-arrow {
+            width: 32px;
+            height: 32px;
+            border-left: 2.5px solid rgba(255,255,255,0.8);
+            border-bottom: 2.5px solid rgba(255,255,255,0.8);
+            transform: rotate(-45deg);
+            margin: 0 auto 12px;
+            animation: arrowAnim 1.6s infinite;
+        }
+        .scroll-text {
+            color: rgba(255,255,255,0.9);
+            font-size: 0.85rem;
+            background: rgba(0,0,0,0.3);
+            padding: 6px 16px;
+            border-radius: 40px;
+            display: inline-block;
+        }
+        @keyframes arrowAnim {
+            0%, 100% { transform: rotate(-45deg) translate(0,0); opacity: 0.4; }
+            50% { transform: rotate(-45deg) translate(8px,8px); opacity: 1; }
+        }
+
+        @media (max-width: 480px) {
+            .code-digits { font-size: 2rem; letter-spacing: 12px; }
+            .numpad-btn { padding: 14px; font-size: 1.4rem; }
+            .telegram-series-btn, .dynamic-action-btn { padding: 5px 12px; font-size: 0.7rem; }
+            .dynamic-action-btn { top: 68px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="scroll-instruction" id="scrollInstruction">
+    <div class="scroll-arrow"></div>
+    <div class="scroll-text">👆 Yuqoriga suring | Shortslar avtomatik ijro etiladi</div>
+</div>
+
+<div class="logo"><span>🎬 KINOTOP</span></div>
+<a href="/admin" class="admin-btn">🔐</a>
+
+<!-- Seriallar tugmasi (Telegram) -->
+<div class="telegram-series-btn" id="telegramSeriesBtn">
+    <i class="fab fa-telegram-plane"></i>
+    <span>Seriallar</span>
+</div>
+
+<!-- Dinamik tugma - admin panel orqali boshqariladi -->
+<div class="dynamic-action-btn" id="dynamicActionBtn">
+    <i class="fas fa-ticket-alt"></i>
+    <span id="dynamicBtnText">Top Kino</span>
+</div>
+
+<div class="shorts-container" id="shortsContainer"></div>
+
+<div class="code-btn" id="openModalBtn">
+    <div class="code-btn-left">
+        <div class="code-btn-icon"><i class="fas fa-qrcode"></i></div>
+        <div class="code-btn-text">
+            <h4>Maxfiy kod orqali kino</h4>
+            <p>4 xonali kod bilan premium filmlar</p>
+        </div>
+    </div>
+    <div class="code-btn-arrow"><i class="fas fa-chevron-up"></i></div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+    <div class="modal-close" id="closeModalBtn"><i class="fas fa-times"></i></div>
+    <div class="modal-container">
+        <div class="modal-header">
+            <h3>🎟️ Film kod paneli</h3>
+            <p>4 xonali kodni kiriting va darhol tomosha qiling</p>
+        </div>
+        <div class="code-screen">
+            <div class="code-digits" id="codeDisplay">____</div>
+            <div class="code-hint" style="color:#aaa; font-size:0.7rem; margin-top:10px;">Raqamlarni kiriting</div>
+        </div>
+        <div class="numpad">
+            <div class="numpad-btn" data-value="1">1</div><div class="numpad-btn" data-value="2">2</div><div class="numpad-btn" data-value="3">3</div>
+            <div class="numpad-btn" data-value="4">4</div><div class="numpad-btn" data-value="5">5</div><div class="numpad-btn" data-value="6">6</div>
+            <div class="numpad-btn" data-value="7">7</div><div class="numpad-btn" data-value="8">8</div><div class="numpad-btn" data-value="9">9</div>
+            <div class="numpad-btn" data-value=""></div><div class="numpad-btn" data-value="0">0</div><div class="numpad-btn" data-value=""></div>
+        </div>
+        <div class="action-buttons">
+            <div class="action-clear" id="clearBtn">Tozalash</div>
+            <div class="action-delete" id="backspaceBtn"><i class="fas fa-backspace"></i> O'chir</div>
+        </div>
+        <button class="watch-submit" id="watchSubmitBtn"><i class="fas fa-play-circle"></i> Tomosha qilish</button>
+    </div>
+</div>
+
+<div class="film-loading" id="filmLoading">
+    <div class="film-loading-spinner"></div>
+    <div class="film-loading-text">🎞️ Kino tayyorlanmoqda...</div>
+</div>
+
+<script>
+    const originalShorts = {{ shorts | tojson | safe }};
+    
+    function shuffleArray(arr) {
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+    }
+    
+    let shorts = shuffleArray([...originalShorts]);
+    const shortsContainer = document.getElementById('shortsContainer');
+    
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    function renderShorts() {
+        shortsContainer.innerHTML = '';
+        shorts.forEach((short, idx) => {
+            const div = document.createElement('div');
+            div.className = 'short-video';
+            div.setAttribute('data-id', short.id);
+            div.setAttribute('data-index', idx);
+            div.innerHTML = `
+                <iframe data-src="${short.embed_url}" src="about:blank" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>
+                <div class="short-info">
+                    <div class="short-title">${escapeHtml(short.sarlavha)}</div>
+                    <div class="short-desc">${escapeHtml(short.tafsilot || '⚡ Trending short')}</div>
+                </div>
+                <div class="overlay-buttons">
+                    <div class="overlay-btn sound-btn" data-id="${short.id}">🔇</div>
+                    <div class="overlay-btn share-btn"><i class="fa-regular fa-share-from-square"></i></div>
+                </div>
+            `;
+            shortsContainer.appendChild(div);
+        });
+    }
+    
+    let allVideos = [];
+    let currentIndex = -1;
+    let currentIframe = null;
+    let isVideoLoading = false;
+    
+    function getAllVideos() {
+        allVideos = Array.from(document.querySelectorAll('.short-video'));
+    }
+    
+    function playVideoAt(index) {
+        if (index === currentIndex || isVideoLoading) return;
+        if (index < 0 || index >= allVideos.length) return;
+        isVideoLoading = true;
         
-        conn.execute('''CREATE TABLE IF NOT EXISTS shorts (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            sarlavha TEXT NOT NULL,
-            tafsilot TEXT,
-            embed_url TEXT NOT NULL,
-            video_id TEXT,
-            platform TEXT,
-            sana TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )''')
-        
-        # Yangi: Dinamik tugma sozlamalari uchun jadval
-        conn.execute('''CREATE TABLE IF NOT EXISTS settings (
-            key TEXT PRIMARY KEY,
-            value TEXT,
-            sana TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )''')
-        
-        # Default tugma sozlamalarini qo'shish (agar mavjud bo'lmasa)
-        conn.execute("INSERT OR IGNORE INTO settings (key, value) VALUES ('action_button_enabled', 'true')")
-        conn.execute("INSERT OR IGNORE INTO settings (key, value) VALUES ('action_button_text', 'Top Kino')")
-        conn.execute("INSERT OR IGNORE INTO settings (key, value) VALUES ('action_button_url', 'https://t.me/Kodlikino_topbot')")
-        
-        conn.commit()
-    print("✅ Database ready")
-
-init_db()
-
-def allowed_file(filename, allowed):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed
-
-# ============ URL NI TO'G'RI FORMATGA KELTIRISH ============
-def get_redirect_url(video_url):
-    """Google Drive va UZMedia uchun to'g'ri ochiladigan URL qaytaradi"""
-    if not video_url:
-        return video_url
-    
-    # Google Drive - preview sahifasiga o'tkazish
-    if 'drive.google.com' in video_url:
-        match = re.search(r'/d/([a-zA-Z0-9_-]+)', video_url)
-        if match:
-            file_id = match.group(1)
-            return f'https://drive.google.com/file/d/{file_id}/preview'
-        return video_url
-    
-    # UZMedia - embed versiyaga o'tkazish
-    if 'uzmedia.tv' in video_url:
-        if 'embed.html' not in video_url:
-            match = re.search(r'/([a-zA-Z0-9_-]+)$', video_url)
-            if match:
-                video_id = match.group(1)
-                return f'http://uzmedia.tv/embed.html?file={video_id}'
-        return video_url
-    
-    return video_url
-
-# ============ PUBLIC ROUTES ============
-@app.route('/')
-def index():
-    with get_db() as conn:
-        shorts = conn.execute("SELECT * FROM shorts ORDER BY sana DESC").fetchall()
-        shorts = [dict(row) for row in shorts]
-    
-    return render_template('index.html', shorts=shorts)
-
-@app.route('/film/<kod>')
-def film_page(kod):
-    with get_db() as conn:
-        row = conn.execute("SELECT * FROM films WHERE kod = ?", (kod.upper(),)).fetchone()
-    
-    if not row:
-        return "Film topilmadi!", 404
-    
-    film = dict(row)
-    video_url = film['video_url']
-    redirect_url = get_redirect_url(video_url)
-    
-    return redirect(redirect_url)
-
-# ============ API ============
-@app.route('/api/check/<kod>')
-def check_film(kod):
-    with get_db() as conn:
-        row = conn.execute("SELECT id, nomi FROM films WHERE kod = ?", (kod.upper(),)).fetchone()
-    
-    if row:
-        return jsonify({"exists": True, "nomi": row['nomi']}), 200
-    return jsonify({"exists": False}), 404
-
-# ============ DINAMIK TUGMA API ============
-@app.route('/api/action-button', methods=['GET'])
-def get_action_button():
-    """Dinamik tugma sozlamalarini olish"""
-    with get_db() as conn:
-        enabled = conn.execute("SELECT value FROM settings WHERE key = 'action_button_enabled'").fetchone()
-        text = conn.execute("SELECT value FROM settings WHERE key = 'action_button_text'").fetchone()
-        url = conn.execute("SELECT value FROM settings WHERE key = 'action_button_url'").fetchone()
-    
-    return jsonify({
-        "enabled": enabled['value'] == 'true' if enabled else True,
-        "text": text['value'] if text else "Top Kino",
-        "url": url['value'] if url else "https://t.me/Kodlikino_topbot"
-    })
-
-@app.route('/api/action-button', methods=['POST'])
-def update_action_button():
-    """Admin panel orqali dinamik tugma sozlamalarini yangilash"""
-    if not session.get('admin_logged_in'):
-        return jsonify({"error": "Unauthorized"}), 401
-    
-    data = request.get_json()
-    if not data:
-        return jsonify({"error": "Invalid data"}), 400
-    
-    with get_db() as conn:
-        if 'enabled' in data:
-            conn.execute("UPDATE settings SET value = ? WHERE key = 'action_button_enabled'", 
-                        ('true' if data['enabled'] else 'false',))
-        if 'text' in data and data['text']:
-            conn.execute("UPDATE settings SET value = ? WHERE key = 'action_button_text'", (data['text'],))
-        if 'url' in data and data['url']:
-            conn.execute("UPDATE settings SET value = ? WHERE key = 'action_button_url'", (data['url'],))
-        conn.commit()
-    
-    return jsonify({"success": True})
-
-# ============ ADMIN PANEL ============
-@app.route('/admin', methods=['GET', 'POST'])
-def admin():
-    if session.get('admin_logged_in'):
-        with get_db() as conn:
-            filmlar = [dict(row) for row in conn.execute("SELECT * FROM films ORDER BY id DESC").fetchall()]
-            shorts_list = [dict(row) for row in conn.execute("SELECT * FROM shorts ORDER BY sana DESC").fetchall()]
-            
-            # Dinamik tugma sozlamalarini olish
-            action_enabled = conn.execute("SELECT value FROM settings WHERE key = 'action_button_enabled'").fetchone()
-            action_text = conn.execute("SELECT value FROM settings WHERE key = 'action_button_text'").fetchone()
-            action_url = conn.execute("SELECT value FROM settings WHERE key = 'action_button_url'").fetchone()
-            
-            total_films = len(filmlar)
-            total_shorts = len(shorts_list)
-            
-            action_config = {
-                'enabled': action_enabled['value'] == 'true' if action_enabled else True,
-                'text': action_text['value'] if action_text else "Top Kino",
-                'url': action_url['value'] if action_url else "https://t.me/Kodlikino_topbot"
+        allVideos.forEach(item => {
+            const iframe = item.querySelector("iframe");
+            if (iframe) {
+                iframe.src = "about:blank";
+                iframe.classList.remove("active");
+                iframe.classList.add("inactive");
             }
+        });
+    
+        const video = allVideos[index];
+        const iframe = video.querySelector("iframe");
+        if (!iframe) { isVideoLoading = false; return; }
+    
+        let src = iframe.dataset.src;
+        if (!src.includes("autoplay=1")) src += (src.includes("?") ? "&" : "?") + "autoplay=1";
+        if (!src.includes("mute=0")) src += "&mute=0";
         
-        return render_template('admin.html', login=True, filmlar=filmlar, shorts_list=shorts_list,
-                               total_films=total_films, total_shorts=total_shorts, action_config=action_config)
+        document.querySelectorAll('.sound-btn').forEach(btn => { btn.innerHTML = '🔇'; });
+        const soundBtn = video.querySelector('.sound-btn');
+        if (soundBtn) soundBtn.innerHTML = '🔊';
+        
+        setTimeout(() => {
+            iframe.src = src;
+            iframe.classList.remove("inactive");
+            iframe.classList.add("active");
+            currentIframe = iframe;
+            currentIndex = index;
+            isVideoLoading = false;
+        }, 50);
+    }
     
-    if request.method == 'POST':
-        parol = request.form.get('parol')
-        if parol == ADMIN_PASSWORD:
-            session['admin_logged_in'] = True
-            return redirect(url_for('admin'))
-        else:
-            return render_template('admin.html', login=False, xato="Parol noto'g'ri!")
+    function toggleSound(btn) {
+        const parent = btn.closest('.short-video');
+        if (!parent) return;
+        const idx = parseInt(parent.getAttribute('data-index'));
+        if (idx === currentIndex && currentIframe && currentIframe.contentWindow) {
+            if (btn.innerHTML === '🔊') {
+                btn.innerHTML = '🔇';
+                currentIframe.contentWindow.postMessage('{"event":"command","func":"mute","args":""}', '*');
+            } else {
+                btn.innerHTML = '🔊';
+                currentIframe.contentWindow.postMessage('{"event":"command","func":"unMute","args":""}', '*');
+            }
+        } else {
+            playVideoAt(idx);
+        }
+    }
     
-    return render_template('admin.html', login=False)
-
-@app.route('/admin/logout')
-def admin_logout():
-    session.pop('admin_logged_in', None)
-    return redirect(url_for('admin'))
-
-@app.route('/admin/film', methods=['POST'])
-def admin_add_film():
-    if not session.get('admin_logged_in'):
-        return redirect(url_for('admin'))
+    function shareToTelegram(videoTitle) {
+        const botUsername = "Kodlikino_topbot";
+        const message = `🎬 KinoTop🤩 t.me/${botUsername} da eng sara filmlarni tomosha qiling! 🔥 ${videoTitle}`;
+        window.open(`https://t.me/share/url?url=https://t.me/${botUsername}&text=${encodeURIComponent(message)}`, '_blank');
+    }
     
-    kod = request.form['kod'].strip().upper()
-    nomi = request.form['nomi'].strip()
-    tafsilot = request.form.get('tafsilot', '')
-    yil = request.form.get('yil', '')
-    janr = request.form.get('janr', '')
-    video_url = request.form.get('video_url', '').strip()
+    function openTelegramChannel() {
+        window.open('https://t.me/Kodlikino_topbot', '_blank');
+    }
     
-    if not video_url:
-        return "Video URL manzili kerak!", 400
+    // Dinamik tugmani sozlash (admin panel orqali)
+    function initDynamicButton() {
+        const dynamicBtn = document.getElementById('dynamicActionBtn');
+        const btnTextSpan = document.getElementById('dynamicBtnText');
+        
+        // Serverdan tugma sozlamalarini olish
+        fetch('/api/action-button')
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.enabled === true) {
+                    btnTextSpan.innerText = data.text || "Top Kino";
+                    dynamicBtn.style.display = 'flex';
+                    const url = data.url || "https://t.me/Kodlikino_topbot";
+                    dynamicBtn.onclick = () => { window.open(url, '_blank'); };
+                } else {
+                    // default: tugma ko'rinsin va vaqtinchalik "Top Kino" bilan ishlasin
+                    btnTextSpan.innerText = "Top Kino";
+                    dynamicBtn.style.display = 'flex';
+                    dynamicBtn.onclick = () => { window.open('https://t.me/Kodlikino_topbot', '_blank'); };
+                }
+            })
+            .catch(() => {
+                // fallback: tugmani default holatda ko'rsatish
+                btnTextSpan.innerText = "Top Kino";
+                dynamicBtn.style.display = 'flex';
+                dynamicBtn.onclick = () => { window.open('https://t.me/Kodlikino_topbot', '_blank'); };
+            });
+    }
     
-    platform = 'other'
-    if 'youtube.com' in video_url or 'youtu.be' in video_url:
-        platform = 'youtube'
-    elif 'drive.google.com' in video_url:
-        platform = 'googledrive'
-    elif 'uzmedia.tv' in video_url:
-        platform = 'uzmedia'
+    function attachEventListeners() {
+        document.querySelectorAll('.sound-btn').forEach(btn => {
+            const newBtn = btn.cloneNode(true);
+            btn.parentNode.replaceChild(newBtn, btn);
+            newBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleSound(newBtn); });
+        });
+        
+        document.querySelectorAll('.share-btn').forEach(btn => {
+            const newShare = btn.cloneNode(true);
+            btn.parentNode.replaceChild(newShare, btn);
+            newShare.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const parentVideo = newShare.closest('.short-video');
+                const titleElem = parentVideo?.querySelector('.short-title');
+                const videoTitle = titleElem ? titleElem.innerText : "KinoTop short";
+                shareToTelegram(videoTitle);
+            });
+        });
+    }
     
-    rasm_nomi = None
-    if 'rasm' in request.files:
-        rasm = request.files['rasm']
-        if rasm and rasm.filename and allowed_file(rasm.filename, ALLOWED_IMAGE):
-            rasm_ext = rasm.filename.rsplit('.', 1)[1].lower()
-            rasm_nomi = f"{kod}.{rasm_ext}"
-            rasm.save(os.path.join(UPLOAD_FOLDER_POSTERS, rasm_nomi))
+    function initFirstVideo() {
+        if (allVideos.length > 0) setTimeout(() => playVideoAt(0), 50);
+    }
     
-    try:
-        with get_db() as conn:
-            conn.execute("""INSERT INTO films 
-                (kod, nomi, tafsilot, yil, janr, rasm, video_url, platform) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-                (kod, nomi, tafsilot, yil, janr, rasm_nomi, video_url, platform))
-            conn.commit()
-    except sqlite3.IntegrityError:
-        return "Bunday kod allaqachon mavjud!", 400
+    function getCurrentVisibleIndex() {
+        const scrollTop = shortsContainer.scrollTop;
+        const itemHeight = window.innerHeight;
+        return Math.min(Math.max(0, Math.round(scrollTop / itemHeight)), allVideos.length - 1);
+    }
     
-    return redirect(url_for('admin'))
-
-@app.route('/admin/film/delete/<int:id>', methods=['POST'])
-def admin_delete_film(id):
-    if not session.get('admin_logged_in'):
-        return redirect(url_for('admin'))
+    let scrollTimer = null;
+    function onScrollHandler() {
+        if (scrollTimer) clearTimeout(scrollTimer);
+        scrollTimer = setTimeout(() => {
+            const newIndex = getCurrentVisibleIndex();
+            if (newIndex !== currentIndex && newIndex >= 0 && newIndex < allVideos.length) {
+                playVideoAt(newIndex);
+            }
+        }, 70);
+    }
     
-    with get_db() as conn:
-        row = conn.execute("SELECT rasm FROM films WHERE id = ?", (id,)).fetchone()
-        if row and row['rasm']:
-            rasm_path = os.path.join(UPLOAD_FOLDER_POSTERS, row['rasm'])
-            if os.path.exists(rasm_path):
-                os.remove(rasm_path)
-        conn.execute("DELETE FROM films WHERE id = ?", (id,))
-        conn.commit()
+    // KOD MODAL
+    let currentCode = '';
+    const maxCodeLength = 4;
+    const codeDisplay = document.getElementById('codeDisplay');
+    const modalOverlay = document.getElementById('modalOverlay');
+    const filmLoading = document.getElementById('filmLoading');
+    const openModalBtn = document.getElementById('openModalBtn');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const backspaceBtn = document.getElementById('backspaceBtn');
+    const watchSubmitBtn = document.getElementById('watchSubmitBtn');
     
-    return redirect(url_for('admin'))
-
-@app.route('/admin/shorts', methods=['POST'])
-def admin_add_shorts():
-    if not session.get('admin_logged_in'):
-        return redirect(url_for('admin'))
+    function updateDisplay() { 
+        codeDisplay.textContent = currentCode.padEnd(maxCodeLength, '_'); 
+        if (currentCode.length === maxCodeLength) submitCode(); 
+    }
+    function addDigit(d) { if (currentCode.length < maxCodeLength) { currentCode += d; updateDisplay(); } }
+    function clearCode() { currentCode = ''; updateDisplay(); }
+    function backspaceFunc() { currentCode = currentCode.slice(0, -1); updateDisplay(); }
     
-    sarlavha = request.form['sarlavha'].strip()
-    tafsilot = request.form.get('tafsilot', '')
-    video_url = request.form.get('video_url', '').strip()
+    function submitCode() {
+        if (currentCode.length !== maxCodeLength) { alert('4 xonali kodni kiriting!'); return; }
+        filmLoading.classList.add('show');
+        fetch(`/api/check/${currentCode}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.exists) window.location.href = `/film/${currentCode}`;
+                else throw new Error('NOT_FOUND');
+            })
+            .catch(() => {
+                filmLoading.classList.remove('show');
+                alert(`❌ "${currentCode}" kodli film topilmadi!`);
+                clearCode();
+            });
+    }
     
-    if not video_url:
-        return "Video URL manzili kerak!", 400
+    document.querySelectorAll('.numpad-btn').forEach(btn => {
+        const val = btn.getAttribute('data-value');
+        if (val && val.trim() !== '') btn.addEventListener('click', () => addDigit(val));
+    });
+    clearBtn.addEventListener('click', clearCode);
+    backspaceBtn.addEventListener('click', backspaceFunc);
+    watchSubmitBtn.addEventListener('click', submitCode);
+    openModalBtn.addEventListener('click', () => { modalOverlay.classList.add('show'); clearCode(); });
+    closeModalBtn.addEventListener('click', () => { modalOverlay.classList.remove('show'); clearCode(); });
+    modalOverlay.addEventListener('click', (e) => { if (e.target === modalOverlay) modalOverlay.classList.remove('show'); });
     
-    platform = 'other'
-    if 'youtube.com' in video_url or 'youtu.be' in video_url:
-        platform = 'youtube'
-    elif 'instagram.com' in video_url:
-        platform = 'instagram'
-    elif 'tiktok.com' in video_url:
-        platform = 'tiktok'
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modalOverlay.classList.contains('show')) modalOverlay.classList.remove('show');
+        if (modalOverlay.classList.contains('show') && /^[0-9]$/.test(e.key)) addDigit(e.key);
+        if (modalOverlay.classList.contains('show') && e.key === 'Enter') submitCode();
+    });
     
-    embed_url = video_url
-    if 'youtube.com/shorts' in video_url:
-        match = re.search(r'shorts/([a-zA-Z0-9_-]+)', video_url)
-        if match:
-            embed_url = f'https://www.youtube.com/embed/{match.group(1)}?autoplay=1'
+    document.getElementById('telegramSeriesBtn').addEventListener('click', openTelegramChannel);
     
-    with get_db() as conn:
-        conn.execute("""INSERT INTO shorts 
-            (sarlavha, tafsilot, embed_url, video_id, platform) 
-            VALUES (?, ?, ?, ?, ?)""",
-            (sarlavha, tafsilot, embed_url, video_url, platform))
-        conn.commit()
+    window.addEventListener("beforeunload", () => { document.querySelectorAll("iframe").forEach(i => i.src = "about:blank"); });
+    document.addEventListener("visibilitychange", () => { if (document.hidden) document.querySelectorAll("iframe").forEach(i => i.src = "about:blank"); });
     
-    return redirect(url_for('admin'))
-
-@app.route('/admin/shorts/delete/<int:id>', methods=['POST'])
-def admin_delete_shorts(id):
-    if not session.get('admin_logged_in'):
-        return redirect(url_for('admin'))
+    function initApp() {
+        renderShorts();
+        getAllVideos();
+        attachEventListeners();
+        shortsContainer.addEventListener('scroll', onScrollHandler);
+        
+        let touchStartY = 0, touchEndY = 0, touchTimer = null;
+        shortsContainer.addEventListener('touchstart', (e) => { touchStartY = e.touches[0].clientY; });
+        shortsContainer.addEventListener('touchend', () => {
+            const diff = touchStartY - touchEndY;
+            if (Math.abs(diff) > 40) {
+                if (touchTimer) clearTimeout(touchTimer);
+                touchTimer = setTimeout(() => {
+                    const newIndex = getCurrentVisibleIndex();
+                    if (newIndex !== currentIndex) playVideoAt(newIndex);
+                }, 70);
+            }
+        });
+        shortsContainer.addEventListener('touchmove', (e) => { touchEndY = e.touches[0].clientY; });
+        
+        setTimeout(() => {
+            const instr = document.getElementById('scrollInstruction');
+            if (instr) instr.classList.add('fade-out');
+        }, 2500);
+        
+        initFirstVideo();
+        initDynamicButton(); // Dinamik tugmani yuklash
+    }
     
-    with get_db() as conn:
-        conn.execute("DELETE FROM shorts WHERE id = ?", (id,))
-        conn.commit()
-    
-    return redirect(url_for('admin'))
-
-@app.route('/admin/action-button', methods=['POST'])
-def admin_update_action_button():
-    if not session.get('admin_logged_in'):
-        return redirect(url_for('admin'))
-    
-    enabled = request.form.get('enabled') == 'true'
-    text = request.form.get('text', 'Top Kino').strip()
-    url = request.form.get('url', 'https://t.me/Kodlikino_topbot').strip()
-    
-    with get_db() as conn:
-        conn.execute("UPDATE settings SET value = ? WHERE key = 'action_button_enabled'", ('true' if enabled else 'false',))
-        conn.execute("UPDATE settings SET value = ? WHERE key = 'action_button_text'", (text,))
-        conn.execute("UPDATE settings SET value = ? WHERE key = 'action_button_url'", (url,))
-        conn.commit()
-    
-    return redirect(url_for('admin'))
-
-@app.route('/static/uploads/posters/<filename>')
-def serve_poster(filename):
-    from flask import send_from_directory
-    return send_from_directory(UPLOAD_FOLDER_POSTERS, filename)
-
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 8080))
-    print(f"""
-    ╔══════════════════════════════════════════════════════════════╗
-    ║                                                              ║
-    ║     🎬 KINOTOP - REDIRECT VERSION 🎬                        ║
-    ║                                                              ║
-    ╠══════════════════════════════════════════════════════════════╣
-    ║                                                              ║
-    ║  🌐 PORT:        {port}                                      ║
-    ║  🔐 ADMIN:       /admin                                     ║
-    ║  📝 ADMIN PASS:  Betmilion1                                 ║
-    ║                                                              ║
-    ║  🎮 DINAMIK TUGMA:                                          ║
-    ║     Admin panel -> "Dinamik Tugma" bo'limida sozlash        ║
-    ║                                                              ║
-    ╚══════════════════════════════════════════════════════════════╝
-    """)
-    app.run(host='0.0.0.0', port=port, debug=True)
+    initApp();
+</script>
+</body>
+</html>
