@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Kinotop | Film tomosha qilish</title>
-    <link rel="manifest" href="/static/manifest.json">
-    <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
-    <meta name="theme-color" content="#667eea">
+    <title>Kinotop | Universal video pleer</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- HLS.js - M3U8 formatlar uchun -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
         * {
             margin: 0;
@@ -51,7 +50,13 @@
             position: absolute;
             top: 0;
             left: 0;
+        }
+
+        .video-wrapper video {
+            width: 100%;
+            height: 100%;
             object-fit: contain;
+            background: #000;
         }
 
         .controls-overlay {
@@ -274,10 +279,7 @@
     </div>
     
     <div class="video-wrapper" id="videoWrapper">
-        <iframe id="videoIframe" 
-                allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
-                allowfullscreen="true">
-        </iframe>
+        <!-- Dinamik ravishda video yoki iframe qo'shiladi -->
         
         <div class="controls-overlay" id="controlsOverlay">
             <div class="control-buttons">
@@ -322,16 +324,18 @@
     (function() {
         // ============ GLOBAL VARIABLES ============
         const filmData = {{ film | tojson | safe }};
-        let player = null;
+        let currentPlayer = null;
+        let currentVideo = null;
         let isPlaying = false;
         let controlsTimer = null;
         let backTimer = null;
         let progressInterval = null;
+        let hls = null;
+        let playerType = null; // 'youtube', 'vimeo', 'video', 'iframe'
         
         // ============ HELPER FUNCTIONS ============
-        function extractVideoId(url) {
+        function extractYoutubeId(url) {
             if (!url) return null;
-            
             const patterns = [
                 /(?:youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/,
                 /(?:youtu\.be\/)([a-zA-Z0-9_-]{11})/,
@@ -339,12 +343,48 @@
                 /(?:youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
                 /^([a-zA-Z0-9_-]{11})$/
             ];
-            
             for (let pattern of patterns) {
                 const match = url.match(pattern);
                 if (match) return match[1];
             }
             return null;
+        }
+        
+        function extractVimeoId(url) {
+            const match = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+            return match ? match[1] : null;
+        }
+        
+        function extractGoogleDriveId(url) {
+            // Google Drive shareable link or file ID
+            const patterns = [
+                /drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/,
+                /drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/,
+                /drive\.google\.com\/uc\?id=([a-zA-Z0-9_-]+)/,
+                /^([a-zA-Z0-9_-]{28,})$/
+            ];
+            for (let pattern of patterns) {
+                const match = url.match(pattern);
+                if (match) return match[1];
+            }
+            return null;
+        }
+        
+        function getGoogleDriveDirectUrl(fileId) {
+            return `https://drive.google.com/uc?export=download&id=${fileId}`;
+        }
+        
+        function isDirectVideoUrl(url) {
+            const patterns = /\.(mp4|webm|ogg|mov|avi|mkv|m4v)(\?.*)?$/i;
+            return patterns.test(url);
+        }
+        
+        function isM3u8Url(url) {
+            return url.includes('.m3u8') || url.includes('m3u8');
+        }
+        
+        function isUzmediaUrl(url) {
+            return url.includes('uzmedia.tv') || url.includes('files.uzmedia.tv');
         }
         
         function formatTime(seconds) {
@@ -368,6 +408,12 @@
             }, 4000);
         }
         
+        function hideLoading() {
+            setTimeout(() => {
+                document.getElementById('filmLoading').classList.add('hide');
+            }, 500);
+        }
+        
         // ============ CONTROL FUNCTIONS ============
         function hideControls() {
             const controls = document.getElementById('controlsOverlay');
@@ -383,7 +429,7 @@
             filmInfo.classList.add('show');
             
             if (controlsTimer) clearTimeout(controlsTimer);
-            controlsTimer = setTimeout(hideControls, 1200);
+            controlsTimer = setTimeout(hideControls, 3000);
         }
         
         function showBackButton() {
@@ -397,42 +443,59 @@
         }
         
         function togglePlayPause() {
-            if (!player) return;
-            
-            try {
-                if (isPlaying) {
-                    player.pauseVideo();
-                    document.getElementById('playPauseBtn').innerHTML = '<i class="fas fa-play"></i>';
-                    isPlaying = false;
-                } else {
-                    player.playVideo();
-                    document.getElementById('playPauseBtn').innerHTML = '<i class="fas fa-pause"></i>';
+            if (playerType === 'video' && currentVideo) {
+                if (currentVideo.paused) {
+                    currentVideo.play();
                     isPlaying = true;
+                    document.getElementById('playPauseBtn').innerHTML = '<i class="fas fa-pause"></i>';
+                } else {
+                    currentVideo.pause();
+                    isPlaying = false;
+                    document.getElementById('playPauseBtn').innerHTML = '<i class="fas fa-play"></i>';
                 }
-            } catch(e) {}
+            } else if (playerType === 'youtube' && currentPlayer) {
+                try {
+                    if (isPlaying) {
+                        currentPlayer.pauseVideo();
+                        document.getElementById('playPauseBtn').innerHTML = '<i class="fas fa-play"></i>';
+                        isPlaying = false;
+                    } else {
+                        currentPlayer.playVideo();
+                        document.getElementById('playPauseBtn').innerHTML = '<i class="fas fa-pause"></i>';
+                        isPlaying = true;
+                    }
+                } catch(e) {}
+            }
             showControls();
         }
         
         function seek(seconds) {
-            if (!player) return;
-            try {
-                const currentTime = player.getCurrentTime();
-                const duration = player.getDuration();
-                let newTime = currentTime + seconds;
-                newTime = Math.max(0, Math.min(newTime, duration));
-                player.seekTo(newTime, true);
-            } catch(e) {}
+            if (playerType === 'video' && currentVideo) {
+                currentVideo.currentTime = Math.max(0, Math.min(currentVideo.duration, currentVideo.currentTime + seconds));
+                updateProgress();
+            } else if (playerType === 'youtube' && currentPlayer) {
+                try {
+                    const currentTime = currentPlayer.getCurrentTime();
+                    const duration = currentPlayer.getDuration();
+                    let newTime = currentTime + seconds;
+                    newTime = Math.max(0, Math.min(newTime, duration));
+                    currentPlayer.seekTo(newTime, true);
+                } catch(e) {}
+            }
             showControls();
         }
         
         function seekToPercent(percent) {
-            if (!player) return;
-            try {
-                const duration = player.getDuration();
-                if (duration > 0) {
-                    player.seekTo(duration * percent, true);
-                }
-            } catch(e) {}
+            if (playerType === 'video' && currentVideo && currentVideo.duration) {
+                currentVideo.currentTime = currentVideo.duration * percent;
+            } else if (playerType === 'youtube' && currentPlayer) {
+                try {
+                    const duration = currentPlayer.getDuration();
+                    if (duration > 0) {
+                        currentPlayer.seekTo(duration * percent, true);
+                    }
+                } catch(e) {}
+            }
             showControls();
         }
         
@@ -452,112 +515,235 @@
         }
         
         function updateProgress() {
-            if (!player) return;
-            
-            try {
-                const currentTime = player.getCurrentTime();
-                const duration = player.getDuration();
+            if (playerType === 'video' && currentVideo && currentVideo.duration) {
+                const percent = (currentVideo.currentTime / currentVideo.duration) * 100;
+                document.getElementById('progressFilled').style.width = percent + '%';
+                document.getElementById('currentTime').textContent = formatTime(currentVideo.currentTime);
+                document.getElementById('duration').textContent = formatTime(currentVideo.duration);
                 
-                if (duration && duration > 0) {
-                    const percent = (currentTime / duration) * 100;
-                    document.getElementById('progressFilled').style.width = percent + '%';
-                    document.getElementById('currentTime').textContent = formatTime(currentTime);
-                    document.getElementById('duration').textContent = formatTime(duration);
-                }
-                
-                if (player.getVideoLoadedFraction) {
-                    const buffered = player.getVideoLoadedFraction() * 100;
+                if (currentVideo.buffered.length > 0) {
+                    const buffered = (currentVideo.buffered.end(currentVideo.buffered.length - 1) / currentVideo.duration) * 100;
                     document.getElementById('progressBuffered').style.width = buffered + '%';
                 }
-            } catch(e) {}
-        }
-        
-        // ============ PLAYER EVENTS ============
-        function onPlayerReady() {
-            setTimeout(() => {
-                document.getElementById('filmLoading').classList.add('hide');
-            }, 300);
-            
-            if (progressInterval) clearInterval(progressInterval);
-            progressInterval = setInterval(updateProgress, 1000);
-            
-            isPlaying = true;
-            document.getElementById('playPauseBtn').innerHTML = '<i class="fas fa-pause"></i>';
-            
-            // Auto hide back button after 2 seconds
-            setTimeout(() => {
-                document.getElementById('backBtn').classList.add('hide');
-            }, 2000);
-        }
-        
-        function onPlayerStateChange(event) {
-            if (event.data == YT.PlayerState.PLAYING) {
-                isPlaying = true;
-                document.getElementById('playPauseBtn').innerHTML = '<i class="fas fa-pause"></i>';
-            } else if (event.data == YT.PlayerState.PAUSED) {
-                isPlaying = false;
-                document.getElementById('playPauseBtn').innerHTML = '<i class="fas fa-play"></i>';
+            } else if (playerType === 'youtube' && currentPlayer) {
+                try {
+                    const currentTime = currentPlayer.getCurrentTime();
+                    const duration = currentPlayer.getDuration();
+                    if (duration > 0) {
+                        const percent = (currentTime / duration) * 100;
+                        document.getElementById('progressFilled').style.width = percent + '%';
+                        document.getElementById('currentTime').textContent = formatTime(currentTime);
+                        document.getElementById('duration').textContent = formatTime(duration);
+                    }
+                    if (currentPlayer.getVideoLoadedFraction) {
+                        const buffered = currentPlayer.getVideoLoadedFraction() * 100;
+                        document.getElementById('progressBuffered').style.width = buffered + '%';
+                    }
+                } catch(e) {}
             }
         }
         
-        function onPlayerError() {
-            console.log('Player error');
-        }
-        
-        // ============ INIT PLAYER ============
-        function initPlayer(videoId) {
-            const iframe = document.getElementById('videoIframe');
-            
-            player = new YT.Player(iframe, {
-                events: {
-                    'onReady': onPlayerReady,
-                    'onStateChange': onPlayerStateChange,
-                    'onError': onPlayerError
-                }
+        // ============ VIDEO EVENT HANDLERS ============
+        function setupVideoEvents(video) {
+            video.addEventListener('play', () => {
+                isPlaying = true;
+                document.getElementById('playPauseBtn').innerHTML = '<i class="fas fa-pause"></i>';
+            });
+            video.addEventListener('pause', () => {
+                isPlaying = false;
+                document.getElementById('playPauseBtn').innerHTML = '<i class="fas fa-play"></i>';
+            });
+            video.addEventListener('timeupdate', updateProgress);
+            video.addEventListener('loadedmetadata', () => {
+                document.getElementById('duration').textContent = formatTime(video.duration);
+                hideLoading();
+            });
+            video.addEventListener('canplay', () => {
+                hideLoading();
+            });
+            video.addEventListener('error', (e) => {
+                console.error('Video error:', e);
+                showError('Video yuklashda xatolik');
+                hideLoading();
             });
         }
         
-        // ============ LOAD VIDEO ============
+        // ============ LOAD VIDEO BY TYPE ============
         function loadVideo() {
-            const loading = document.getElementById('filmLoading');
+            const wrapper = document.getElementById('videoWrapper');
+            const videoUrl = filmData.video_url || filmData.embed_url;
             
-            if (!filmData || !filmData.id) {
-                loading.classList.add('hide');
-                showError('Film ma\'lumotlari topilmadi!');
-                setTimeout(() => window.location.href = '/', 2000);
+            if (!videoUrl) {
+                hideLoading();
+                showError('Video URL topilmadi!');
                 return;
             }
             
             document.getElementById('filmTitle').textContent = filmData.sarlavha || filmData.nomi || 'Film';
             document.getElementById('filmDesc').textContent = filmData.tafsilot || filmData.description || '';
             
-            let videoUrl = filmData.video_url || filmData.embed_url;
-            let videoId = extractVideoId(videoUrl);
+            // Clear wrapper
+            wrapper.innerHTML = '';
+            wrapper.appendChild(document.getElementById('controlsOverlay'));
+            wrapper.appendChild(document.getElementById('filmInfo'));
             
-            if (!videoId) {
-                loading.classList.add('hide');
-                showError('Video ID topilmadi!');
-                return;
-            }
+            // Check video type
+            const youtubeId = extractYoutubeId(videoUrl);
+            const vimeoId = extractVimeoId(videoUrl);
+            const googleDriveId = extractGoogleDriveId(videoUrl);
             
-            // Load iframe directly
-            const iframe = document.getElementById('videoIframe');
-            iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&controls=0&modestbranding=1&showinfo=0&rel=0&playsinline=1&enablejsapi=1`;
-            
-            // Hide loading after 1 second
-            setTimeout(() => {
-                loading.classList.add('hide');
-            }, 1000);
-            
-            // Load YouTube API
-            if (window.YT && YT.Player) {
-                initPlayer(videoId);
+            if (youtubeId) {
+                // YouTube player
+                playerType = 'youtube';
+                const iframe = document.createElement('iframe');
+                iframe.id = 'youtubePlayer';
+                iframe.src = `https://www.youtube.com/embed/${youtubeId}?autoplay=1&controls=0&modestbranding=1&showinfo=0&rel=0&playsinline=1&enablejsapi=1`;
+                iframe.allow = 'autoplay; fullscreen; encrypted-media; picture-in-picture';
+                iframe.allowFullscreen = true;
+                wrapper.insertBefore(iframe, wrapper.firstChild);
+                
+                // Load YouTube API
+                window.onYouTubeIframeAPIReady = () => {
+                    currentPlayer = new YT.Player('youtubePlayer', {
+                        events: {
+                            onReady: () => {
+                                hideLoading();
+                                isPlaying = true;
+                                document.getElementById('playPauseBtn').innerHTML = '<i class="fas fa-pause"></i>';
+                                if (progressInterval) clearInterval(progressInterval);
+                                progressInterval = setInterval(updateProgress, 1000);
+                            },
+                            onStateChange: (event) => {
+                                if (event.data == YT.PlayerState.PLAYING) {
+                                    isPlaying = true;
+                                    document.getElementById('playPauseBtn').innerHTML = '<i class="fas fa-pause"></i>';
+                                } else if (event.data == YT.PlayerState.PAUSED) {
+                                    isPlaying = false;
+                                    document.getElementById('playPauseBtn').innerHTML = '<i class="fas fa-play"></i>';
+                                }
+                            },
+                            onError: () => {
+                                showError('YouTube video xatosi');
+                                hideLoading();
+                            }
+                        }
+                    });
+                };
+                
+                if (!window.YT) {
+                    const tag = document.createElement('script');
+                    tag.src = 'https://www.youtube.com/iframe_api';
+                    document.head.appendChild(tag);
+                } else {
+                    window.onYouTubeIframeAPIReady();
+                }
+                
+            } else if (vimeoId) {
+                // Vimeo player
+                playerType = 'iframe';
+                const iframe = document.createElement('iframe');
+                iframe.src = `https://player.vimeo.com/video/${vimeoId}?autoplay=1&controls=1&playsinline=1`;
+                iframe.allow = 'autoplay; fullscreen; picture-in-picture';
+                iframe.allowFullscreen = true;
+                wrapper.insertBefore(iframe, wrapper.firstChild);
+                hideLoading();
+                
+            } else if (googleDriveId) {
+                // Google Drive video
+                playerType = 'video';
+                const video = document.createElement('video');
+                video.id = 'videoPlayer';
+                video.src = getGoogleDriveDirectUrl(googleDriveId);
+                video.controls = false;
+                video.autoplay = true;
+                video.playsInline = true;
+                video.style.width = '100%';
+                video.style.height = '100%';
+                video.style.objectFit = 'contain';
+                wrapper.insertBefore(video, wrapper.firstChild);
+                currentVideo = video;
+                setupVideoEvents(video);
+                video.load();
+                
+            } else if (isDirectVideoUrl(videoUrl)) {
+                // Direct MP4/WebM/OGG
+                playerType = 'video';
+                const video = document.createElement('video');
+                video.id = 'videoPlayer';
+                video.src = videoUrl;
+                video.controls = false;
+                video.autoplay = true;
+                video.playsInline = true;
+                video.style.width = '100%';
+                video.style.height = '100%';
+                video.style.objectFit = 'contain';
+                wrapper.insertBefore(video, wrapper.firstChild);
+                currentVideo = video;
+                setupVideoEvents(video);
+                video.load();
+                
+            } else if (isM3u8Url(videoUrl)) {
+                // HLS/M3U8 stream
+                playerType = 'video';
+                const video = document.createElement('video');
+                video.id = 'videoPlayer';
+                video.controls = false;
+                video.autoplay = true;
+                video.playsInline = true;
+                video.style.width = '100%';
+                video.style.height = '100%';
+                video.style.objectFit = 'contain';
+                wrapper.insertBefore(video, wrapper.firstChild);
+                currentVideo = video;
+                
+                if (Hls.isSupported()) {
+                    hls = new Hls();
+                    hls.loadSource(videoUrl);
+                    hls.attachMedia(video);
+                    hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                        video.play();
+                        hideLoading();
+                    });
+                    hls.on(Hls.Events.ERROR, () => {
+                        showError('M3U8 video xatosi');
+                        hideLoading();
+                    });
+                } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                    video.src = videoUrl;
+                    video.addEventListener('loadedmetadata', () => hideLoading());
+                }
+                setupVideoEvents(video);
+                
+            } else if (isUzmediaUrl(videoUrl)) {
+                // Uzmedia.tv - use iframe with their embed
+                playerType = 'iframe';
+                let embedUrl = videoUrl;
+                if (!videoUrl.includes('embed')) {
+                    const fileParam = encodeURIComponent(videoUrl);
+                    embedUrl = `https://uzmedia.tv/embed.html?file=${fileParam}`;
+                }
+                const iframe = document.createElement('iframe');
+                iframe.src = embedUrl;
+                iframe.allow = 'autoplay; fullscreen; encrypted-media';
+                iframe.allowFullscreen = true;
+                wrapper.insertBefore(iframe, wrapper.firstChild);
+                hideLoading();
+                
             } else {
-                const tag = document.createElement('script');
-                tag.src = 'https://www.youtube.com/iframe_api';
-                document.head.appendChild(tag);
-                window.onYouTubeIframeAPIReady = () => initPlayer(videoId);
+                // Generic iframe embed
+                playerType = 'iframe';
+                const iframe = document.createElement('iframe');
+                iframe.src = videoUrl;
+                iframe.allow = 'autoplay; fullscreen; encrypted-media; picture-in-picture';
+                iframe.allowFullscreen = true;
+                wrapper.insertBefore(iframe, wrapper.firstChild);
+                hideLoading();
             }
+            
+            // Auto hide back button after 2 seconds
+            setTimeout(() => {
+                document.getElementById('backBtn').classList.add('hide');
+            }, 2000);
         }
         
         // ============ EVENT LISTENERS ============
@@ -587,6 +773,7 @@
             
             backBtn.addEventListener('click', () => {
                 if (progressInterval) clearInterval(progressInterval);
+                if (hls) hls.destroy();
                 window.location.href = '/';
             });
             
@@ -614,6 +801,10 @@
                 } else if (e.key === 'f' || e.key === 'F') {
                     e.preventDefault();
                     toggleFullScreen();
+                } else if (e.key === 'Escape') {
+                    if (document.fullscreenElement) {
+                        document.exitFullscreen();
+                    }
                 }
                 showControls();
                 showBackButton();
